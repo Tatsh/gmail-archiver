@@ -164,12 +164,15 @@ class Namespace(argparse.Namespace):
 
 
 def main() -> int:
-    log = setup_logging_stderr()
     auth_data_db: Optional[AuthDataDB] = None
     parser = argparse.ArgumentParser()
     parser.add_argument('email')
     parser.add_argument('out_dir')
+    parser.add_argument('-a', '--auth-only', action='store_true')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-r', '--force-refresh', action='store_true')
     args = cast(Namespace, parser.parse_args())
+    log = setup_logging_stderr(verbose=args.verbose)
     email = args.email
     try:
         with open(OAUTH_FILE, 'r') as f:
@@ -198,7 +201,7 @@ def main() -> int:
                       indent=2)
             f.write('\n')
     elif (datetime.fromisoformat(auth_data_db[email]['expiration_time']) <=
-          datetime.now()):
+          datetime.now() or args.force_refresh):
         log.debug('Refreshing token')
         ref_token = auth_data_db[email]['refresh_token']
         auth_data = refresh_token(CLIENT_ID, CLIENT_SECRET,
@@ -221,10 +224,14 @@ def main() -> int:
     log.info('Logging in')
     imap_conn = imaplib.IMAP4_SSL('imap.gmail.com')
     try:
-        process(imap_conn, email, auth_data_db, log, args.out_dir)
+        if not args.auth_only:
+            process(imap_conn, email, auth_data_db, log, args.out_dir)
     finally:
         log.debug('Closing')
-        imap_conn.close()
+        try:
+            imap_conn.close()
+        except imaplib.IMAP4.error as e:
+            log.error(e)
         log.debug('Logging out')
         imap_conn.logout()
     return 0
