@@ -104,8 +104,8 @@ def dq(s: str) -> str:
 T = TypeVar('T')
 
 
-def assert_not_none(x: Optional[T]) -> T:
-    assert x is not None
+def assert_not_none(x: Optional[T], message: str = 'Expected value') -> T:
+    assert x is not None, message
     return x
 
 
@@ -113,7 +113,9 @@ def process(imap_conn: imaplib.IMAP4_SSL, email: str, auth_data_db: AuthDataDB,
             log: logging.Logger, out_dir: str) -> int:
     # imap_conn.debug = 4
     auth_str = generate_oauth2_str(
-        email, assert_not_none(auth_data_db[email].get('access_token')))
+        email,
+        assert_not_none(auth_data_db[email].get('access_token'),
+                        'access_token cannot be None'))
     imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
     imap_conn.select(dq('[Gmail]/All Mail'))
     before_date = (date.today() - timedelta(days=90)).strftime('%d-%b-%Y')
@@ -195,7 +197,9 @@ def main() -> int:
         auth_data = authorize_tokens(CLIENT_ID, CLIENT_SECRET,
                                      generate_oauth_token())
         auth_data['expiration_time'] = (datetime.now() + timedelta(
-            seconds=assert_not_none(auth_data.get('expires_in')))).isoformat()
+            seconds=assert_not_none(auth_data.get('expires_in'),
+                                    'expires_in value cannot be None'))
+                                        ).isoformat()
         log.debug('New auth data for %s: %s', email, auth_data)
         auth_data_db[email] = auth_data
         assert 'refresh_token' in auth_data_db[email]
@@ -207,10 +211,12 @@ def main() -> int:
                       indent=2)
             f.write('\n')
     elif (datetime.fromisoformat(
-            assert_not_none(auth_data_db[email].get('expiration_time'))) <=
+            assert_not_none(auth_data_db[email].get('expiration_time'),
+                            'expiration_time cannot be None')) <=
           datetime.now() or args.force_refresh):
         log.debug('Refreshing token')
-        ref_token = assert_not_none(auth_data_db[email].get('refresh_token'))
+        ref_token = assert_not_none(auth_data_db[email].get('refresh_token'),
+                                    'refresh_token cannot be None')
         auth_data = refresh_token(CLIENT_ID, CLIENT_SECRET, ref_token)
         auth_data['expiration_time'] = (datetime.now() + timedelta(
             seconds=assert_not_none(auth_data.get('expires_in')))).isoformat()
