@@ -124,15 +124,15 @@ def process(imap_conn: imaplib.IMAP4_SSL, email: str, auth_data_db: AuthDataDB,
     if rv != 'OK':
         log.info('No messages matched criteria')
         return 0
-    assert len(result) > 0
+    assert len(result) > 0, 'Search returned zero results'
     for num in result[0].decode().split():
         rv, data = imap_conn.fetch(num, '(RFC822)')
         if rv != 'OK':
             log.error(f'Error getting message #%d', num)
             return 1
         v = data[0]
-        assert v is not None
-        assert isinstance(v, tuple)
+        assert v is not None, 'Unexpected data[0] == None'
+        assert isinstance(v, tuple), 'Unexpected non-tuple type of v'
         msg = message_from_bytes(v[1])
         date_tuple = parsedate_tz(cast(str, msg['Date']))
         if not date_tuple:
@@ -202,7 +202,9 @@ def main() -> int:
                                         ).isoformat()
         log.debug('New auth data for %s: %s', email, auth_data)
         auth_data_db[email] = auth_data
-        assert 'refresh_token' in auth_data_db[email]
+        assert (
+            'refresh_token'
+            in auth_data_db[email]), 'refresh_token not in auth_data_db[email]'
         with open(OAUTH_FILE, 'w+') as f:
             json.dump(auth_data_db,
                       f,
@@ -230,8 +232,8 @@ def main() -> int:
                       sort_keys=True,
                       indent=2)
             f.write('\n')
-    assert auth_data_db is not None
-    assert email in auth_data_db
+    assert auth_data_db is not None, 'auth_data_db is None'
+    assert email in auth_data_db, 'This email is not in auth_data_db'
     log.info('Logging in')
     imap_conn = imaplib.IMAP4_SSL('imap.gmail.com')
     try:
