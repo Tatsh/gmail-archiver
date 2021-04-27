@@ -1,0 +1,4 @@
+{
+  "python.linting.mypyEnabled": false,
+  "python.pythonPath": "/opt/local/bin/python"
+}
