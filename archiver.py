@@ -4,11 +4,8 @@ from email.utils import parsedate_tz
 from functools import lru_cache
 from os import environ, makedirs
 from os.path import basename, expanduser, join, realpath
-from typing import Callable, Dict, List, Optional, Tuple, cast
-try:
-    from typing import TypedDict
-except ImportError:
-    from typing_extensions import TypedDict
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar, cast
+from typing import TypedDict
 from urllib.parse import urlencode, urlunparse
 import argparse
 import imaplib
@@ -104,10 +101,19 @@ def dq(s: str) -> str:
     return f'"{s}"'
 
 
+T = TypeVar('T')
+
+
+def assert_not_none(x: Optional[T]) -> T:
+    assert x is not None
+    return x
+
+
 def process(imap_conn: imaplib.IMAP4_SSL, email: str, auth_data_db: AuthDataDB,
             log: logging.Logger, out_dir: str) -> int:
     # imap_conn.debug = 4
-    auth_str = generate_oauth2_str(email, auth_data_db[email]['access_token'])
+    auth_str = generate_oauth2_str(
+        email, assert_not_none(auth_data_db[email].get('access_token')))
     imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
     imap_conn.select(dq('[Gmail]/All Mail'))
     before_date = (date.today() - timedelta(days=90)).strftime('%d-%b-%Y')
@@ -126,7 +132,7 @@ def process(imap_conn: imaplib.IMAP4_SSL, email: str, auth_data_db: AuthDataDB,
         assert v is not None
         assert isinstance(v, tuple)
         msg = message_from_bytes(v[1])
-        date_tuple = parsedate_tz(msg['Date'])
+        date_tuple = parsedate_tz(cast(str, msg['Date']))
         if not date_tuple:
             log.error('Error converting date: %s', msg['Date'])
             return 1
@@ -158,6 +164,7 @@ def process(imap_conn: imaplib.IMAP4_SSL, email: str, auth_data_db: AuthDataDB,
         imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
     return 0
 
+
 class Namespace(argparse.Namespace):
     email: str
     out_dir: str
@@ -187,9 +194,8 @@ def main() -> int:
             auth_data_db = {}
         auth_data = authorize_tokens(CLIENT_ID, CLIENT_SECRET,
                                      generate_oauth_token())
-        auth_data['expiration_time'] = (
-            datetime.now() +
-            timedelta(seconds=auth_data['expires_in'])).isoformat()
+        auth_data['expiration_time'] = (datetime.now() + timedelta(
+            seconds=assert_not_none(auth_data.get('expires_in')))).isoformat()
         log.debug('New auth data for %s: %s', email, auth_data)
         auth_data_db[email] = auth_data
         assert 'refresh_token' in auth_data_db[email]
@@ -200,15 +206,14 @@ def main() -> int:
                       sort_keys=True,
                       indent=2)
             f.write('\n')
-    elif (datetime.fromisoformat(auth_data_db[email]['expiration_time']) <=
+    elif (datetime.fromisoformat(
+            assert_not_none(auth_data_db[email].get('expiration_time'))) <=
           datetime.now() or args.force_refresh):
         log.debug('Refreshing token')
-        ref_token = auth_data_db[email]['refresh_token']
-        auth_data = refresh_token(CLIENT_ID, CLIENT_SECRET,
-                                  auth_data_db[email]['refresh_token'])
-        auth_data['expiration_time'] = (
-            datetime.now() +
-            timedelta(seconds=auth_data['expires_in'])).isoformat()
+        ref_token = assert_not_none(auth_data_db[email].get('refresh_token'))
+        auth_data = refresh_token(CLIENT_ID, CLIENT_SECRET, ref_token)
+        auth_data['expiration_time'] = (datetime.now() + timedelta(
+            seconds=assert_not_none(auth_data.get('expires_in')))).isoformat()
         auth_data_db[email] = auth_data
         log.debug('New auth data for %s: %s', email, auth_data)
         auth_data_db[email]['refresh_token'] = ref_token
