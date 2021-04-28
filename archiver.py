@@ -4,7 +4,7 @@ from email.utils import parsedate_tz
 from functools import lru_cache
 from os import environ, makedirs
 from os.path import basename, expanduser, join, realpath
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar, cast
+from typing import Callable, Dict, Final, List, Optional, Tuple, TypeVar, cast
 from typing import TypedDict
 from urllib.parse import urlencode, urlunparse
 import argparse
@@ -15,14 +15,14 @@ import sys
 
 import requests
 
-CLIENT_ID = environ['CLIENT_ID']
-CLIENT_SECRET = environ['CLIENT_SECRET']
+CLIENT_ID: Final[str] = environ['CLIENT_ID']
+CLIENT_SECRET: Final[str] = environ['CLIENT_SECRET']
 
-GOOGLE_ACCOUNTS_DOMAIN = 'accounts.google.com'
-GOOGLE_OAUTH2_DOMAIN = 'oauth2.googleapis.com'
-REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
+GOOGLE_ACCOUNTS_DOMAIN: Final[str] = 'accounts.google.com'
+GOOGLE_OAUTH2_DOMAIN: Final[str] = 'oauth2.googleapis.com'
+REDIRECT_URI: Final[str] = 'urn:ietf:wg:oauth:2.0:oob'
 
-OAUTH_FILE = expanduser('~/.cache/gmail-archiver-oauth.json')
+OAUTH_FILE: Final[str] = expanduser('~/.cache/gmail-archiver-oauth.json')
 
 
 class AuthInfo(TypedDict, total=False):
@@ -48,10 +48,12 @@ def setup_logging_stderr(name: Optional[str] = None,
     return log
 
 
+@lru_cache()
 def generate_oauth2_str(username: str, access_token: str) -> str:
     return f'user={username}\1auth=Bearer {access_token}\1\1'
 
 
+@lru_cache()
 def generate_permission_url(client_id: str,
                             scope: str = 'https://mail.google.com/') -> str:
     return urlunparse(
@@ -97,6 +99,7 @@ def refresh_token(client_id: str, client_secret: str,
     return cast(AuthInfo, response.json())
 
 
+@lru_cache()
 def dq(s: str) -> str:
     return f'"{s}"'
 
