@@ -1,3 +1,8 @@
+*.1
+*.j2
+*.jsonnet
+*.libjsonnet
+*.lock
 *.log
 *~
 .*_cache/
@@ -5,6 +10,7 @@
 .cspellcache
 .directory
 .pnp.*
+/.yarn/**/*.cjs
 /.yarn/install-state.gz
 /build/
 /dist/

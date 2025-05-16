@@ -1,0 +1,338 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[project]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+description = "Locally archive Gmail emails."
+dynamic = ["dependencies", "requires-python"]
+keywords = ["backup", "email", "google", "gmail"]
+license = "MIT"
+name = "gmail-archiver"
+readme = "README.md"
+version = "0.0.0"
+
+[[project.authors]]
+email = "audvare@gmail.com"
+name = "Andrew Udvare"
+
+[project.scripts]
+gmail-archiver = "gmail_archiver.main:main"
+
+[project.urls]
+Issues = "https://github.com/Tatsh/gmail-archiver/issues"
+documentation = "https://gmail-archiver.readthedocs.org"
+homepage = "https://tatsh.github.io/gmail-archiver/"
+repository = "https://github.com/Tatsh/gmail-archiver"
+
+[tool.commitizen]
+tag_format = "v$version"
+version_files = [
+  ".wiswa.jsonnet",
+  "CITATION.cff",
+  "README.md",
+  "docs/index.rst",
+  "gmail_archiver/__init__.py",
+  "man/gmail_archiver.1",
+  "package.json",
+]
+version_provider = "pep621"
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:"]
+omit = ["conftest.py", "tests.py", "tests/test_*.py", "__main__.py"]
+show_missing = true
+
+[tool.coverage.run]
+branch = true
+omit = ["conftest.py", "tests.py", "tests/test_*.py", "__main__.py"]
+
+[tool.djlint]
+max_line_length = 100
+no_line_after_yaml = true
+preserve_blank_lines = true
+preserve_leading_space = true
+profile = "jinja"
+use_gitignore = true
+
+[tool.doc8]
+max-line-length = 100
+
+[tool.mypy]
+cache_dir = "~/.cache/mypy"
+explicit_package_bases = true
+platform = "linux"
+python_version = "3.10"
+show_column_numbers = true
+strict = true
+strict_optional = true
+warn_unreachable = true
+
+[tool.poetry]
+include = ["man", { format = "sdist", path = "tests" }]
+
+[tool.poetry.dependencies]
+click = "^8.2.0"
+colorlog = "^6.9.0"
+platformdirs = "^4.3.8"
+python = ">=3.10,<3.14"
+requests = "^2.32.3"
+tomlkit = "^0.13.2"
+typing-extensions = "^4.13.2"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+commitizen = "^4.7.0"
+djlint = "^1.36.4"
+mypy = ">=1.12,<1.16"
+ruff = "^0.11.9"
+types-requests = "^2.32.0.20250306"
+yapf = "^0.43.0"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+autodoc-pydantic = "^2.2.0"
+doc8 = "^1.1.2"
+docutils = "^0.21.2"
+esbonio = "^0.16.5"
+numpydoc = "^1.8.0"
+restructuredtext-lint = "^1.4.0"
+sphinx-click = "^6.0.0"
+sphinx-datatables = "^0.2.1"
+sphinx-hoverxref = "^1.4.2"
+sphinx-immaterial = "^0.13.5"
+
+[tool.poetry.group.docs.dependencies.enum-tools]
+extras = ["sphinx"]
+version = "^0.12.0"
+
+[[tool.poetry.group.docs.dependencies.sphinx]]
+python = ">=3.11"
+version = "^8.2.0"
+
+[[tool.poetry.group.docs.dependencies.sphinx]]
+python = "<3.11"
+version = "^7.2.5"
+
+[tool.poetry.group.tests]
+optional = true
+
+[tool.poetry.group.tests.dependencies]
+mock = "^5.2.0"
+pytest = "^8.3.5"
+pytest-cov = "^6.1.1"
+pytest-mock = "^3.14.0"
+requests-mock = "^1.12.1"
+
+[tool.poetry.group.tests.dependencies.coveralls]
+python = "<3.13"
+version = "^4.0.1"
+
+[[tool.poetry.packages]]
+include = "gmail_archiver"
+
+[tool.pyright]
+deprecateTypingAliases = true
+enableExperimentalFeatures = true
+include = ["./gmail_archiver", "./tests"]
+pythonPlatform = "Linux"
+pythonVersion = "3.10"
+reportCallInDefaultInitializer = "warning"
+reportImplicitOverride = "warning"
+reportImportCycles = "error"
+reportMissingModuleSource = "error"
+reportPropertyTypeMismatch = "error"
+reportShadowedImports = "error"
+reportUnnecessaryTypeIgnoreComment = "none"
+typeCheckingMode = "off"
+useLibraryCodeForTypes = false
+
+[tool.pytest.ini_options]
+mock_use_standalone_module = true
+norecursedirs = ["node_modules"]
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+testpaths = ["tests"]
+
+[tool.ruff]
+cache-dir = "~/.cache/ruff"
+force-exclude = true
+line-length = 100
+namespace-packages = ["docs", "tests"]
+target-version = "py310"
+unsafe-fixes = true
+
+[tool.ruff.lint]
+extend-select = [
+  "A",
+  "AIR",
+  "ANN",
+  "ARG",
+  "ASYNC",
+  "B",
+  "BLE",
+  "C4",
+  "C90",
+  "COM",
+  "CPY",
+  "D",
+  "DJ",
+  "DOC",
+  "DTZ",
+  "E",
+  "EM",
+  "ERA",
+  "EXE",
+  "F",
+  "FA",
+  "FAST",
+  "FBT",
+  "FIX",
+  "FLY",
+  "FURB",
+  "G",
+  "I",
+  "ICN",
+  "INP",
+  "INT",
+  "ISC",
+  "LOG",
+  "N",
+  "NPY",
+  "PD",
+  "PERF",
+  "PGH",
+  "PIE",
+  "PL",
+  "PT",
+  "PTH",
+  "PYI",
+  "Q",
+  "RET",
+  "RSE",
+  "RUF",
+  "S",
+  "SIM",
+  "SLF",
+  "SLOT",
+  "T10",
+  "T20",
+  "TC",
+  "TD",
+  "TID",
+  "TRY",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = [
+  "A005",
+  "ANN401",
+  "ARG001",
+  "ARG002",
+  "ARG004",
+  "C901",
+  "COM812",
+  "CPY001",
+  "D201",
+  "D203",
+  "D204",
+  "D212",
+  "DOC201",
+  "EM101",
+  "N818",
+  "PLR0912",
+  "PLR0913",
+  "PLR0914",
+  "PLR0915",
+  "PLR0917",
+  "PLR1702",
+  "PLR6301",
+  "S101",
+  "S404",
+  "S603",
+  "TD002",
+  "TD003",
+  "TD004",
+  "UP046",
+  "UP047",
+]
+preview = true
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+multiline-quotes = "double"
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+combine-as-imports = true
+from-first = true
+required-imports = ["from __future__ import annotations"]
+section-order = ["future", "standard-library", "third-party", "local-folder"]
+
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["test_*"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.yapf]
+align_closing_bracket_with_visual_indent = true
+allow_multiline_dictionary_keys = false
+allow_multiline_lambdas = false
+allow_split_before_dict_value = true
+blank_line_before_class_docstring = false
+blank_line_before_module_docstring = false
+blank_line_before_nested_class_or_def = false
+blank_lines_around_top_level_definition = 2
+coalesce_brackets = true
+column_limit = 100
+continuation_align_style = "SPACE"
+continuation_indent_width = 4
+dedent_closing_brackets = false
+disable_ending_comma_heuristic = false
+each_dict_entry_on_separate_line = true
+indent_dictionary_value = true
+indent_width = 4
+join_multiple_lines = true
+no_spaces_around_selected_binary_operators = false
+space_between_ending_comma_and_closing_bracket = false
+spaces_around_default_or_named_assign = false
+spaces_around_power_operator = true
+spaces_before_comment = 2
+split_all_comma_separated_values = false
+split_arguments_when_comma_terminated = false
+split_before_bitwise_operator = true
+split_before_closing_bracket = true
+split_before_dict_set_generator = true
+split_before_dot = false
+split_before_expression_after_opening_paren = false
+split_before_first_argument = false
+split_before_logical_operator = true
+split_before_named_assigns = true
+split_complex_comprehension = false
+split_penalty_after_opening_bracket = 30
+split_penalty_after_unary_operator = 10000
+split_penalty_before_if_expr = 0
+split_penalty_bitwise_operator = 300
+split_penalty_comprehension = 80
+split_penalty_excess_character = 7000
+split_penalty_for_added_line_split = 30
+split_penalty_import_names = 0
+split_penalty_logical_operator = 300
+use_tabs = false
+
+[tool.yapfignore]
+ignore_patterns = ["node_modules/**"]
