@@ -48,9 +48,15 @@ log = logging.getLogger(__name__)
 @click.option('--no-delete', help='Do not move emails to trash.', is_flag=True)
 @click.option('-a', '--auth-only', help='Only authorise the user.', is_flag=True)
 @click.option('-d', '--debug', help='Enable debug level logging.', is_flag=True)
+@click.option('-D',
+              '--days',
+              help='Archive emails older than this many days. Set to 0 to archive everything.',
+              type=int,
+              default=90)
 @click.option('--debug-imap', help='Enable debug level logging for IMAP.', is_flag=True)
 @click.option('-r', '--force-refresh', help='Force refresh the token.', is_flag=True)
 def main(email: str,
+         days: int = 90,
          out_dir: Path | None = None,
          *,
          auth_only: bool = False,
@@ -156,6 +162,7 @@ def main(email: str,
                              email,
                              auth_data_db[email]['access_token'],
                              out_dir,
+                             days=days,
                              debug=debug_imap,
                              delete=not no_delete)
     finally:

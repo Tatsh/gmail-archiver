@@ -127,6 +127,7 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
                    email: str,
                    access_token: str,
                    out_dir: Path,
+                   days: int = 90,
                    *,
                    debug: bool = False,
                    delete: bool = False) -> int:
@@ -137,7 +138,7 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
     auth_str = generate_oauth2_str(email, access_token)
     imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
     imap_conn.select(dq('[Gmail]/All Mail'))
-    before_date = (datetime.now(tz=timezone.utc).date() - timedelta(days=90)).strftime('%d-%b-%Y')
+    before_date = (datetime.now(tz=timezone.utc).date() - timedelta(days=days)).strftime('%d-%b-%Y')
     log.debug('Searching for emails before %s.', before_date)
     rv, result = cast('Callable[[str | None, str], tuple[str, list[bytes]]]',
                       imap_conn.search)(None, f'(BEFORE {dq(before_date)})')

@@ -9,21 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.0.2]
+
 ### Added
 
-- Item
-
-### Fixed
-
-- Item
-
-### Changed
-
-- Item
-
-### Removed
-
-- Item
+- Added `-D`/`--days` option.
 
 ## [0.0.1] - 2025-00-00
 

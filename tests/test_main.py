@@ -350,6 +350,7 @@ def test_main_process_called(mocker: MockerFixture, patch_platformdirs: tuple[Pa
                                     email,
                                     mocker.ANY,
                                     tmp_path,
+                                    days=90,
                                     debug=False,
                                     delete=True)
     imap_conn_mock.close.assert_called()
