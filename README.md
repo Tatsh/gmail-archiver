@@ -109,6 +109,8 @@ Options:
   --no-delete          Do not move emails to trash.
   -a, --auth-only      Only authorise the user.
   -d, --debug          Enable debug level logging.
+  -D, --days INTEGER   Archive emails older than this many days. Set to 0 to
+                       archive everything.
   --debug-imap         Enable debug level logging for IMAP.
   -r, --force-refresh  Force refresh the token.
   -h, --help           Show this message and exit.
