@@ -3,7 +3,7 @@
   description: 'Locally archive Gmail emails.',
   keywords: ['backup', 'email', 'google', 'gmail'],
   project_name: 'gmail-archiver',
-  version: '0.0.0',
+  version: '0.0.1',
   want_main: true,
   citation+: {
     'date-released': '2025-05-16',

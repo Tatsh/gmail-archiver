@@ -19,7 +19,7 @@ keywords = ["backup", "email", "google", "gmail"]
 license = "MIT"
 name = "gmail-archiver"
 readme = "README.md"
-version = "0.0.0"
+version = "0.0.1"
 
 [[project.authors]]
 email = "audvare@gmail.com"
