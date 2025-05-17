@@ -202,6 +202,7 @@ def test_main_new_token_authorization_invalid_db(mocker: MockerFixture,
                                         'expires_in': 3600
                                     })
     setup_logging = mocker.patch('gmail_archiver.main.setup_logging')
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
     mocker.patch('gmail_archiver.main.get_localhost_redirect_uri',
                  return_value=(1234, 'http://localhost:1234'))
     callback: Callable[..., Any] | None = None
@@ -289,6 +290,7 @@ def test_main_new_token_authorization_no_code_returned(mocker: MockerFixture,
 
     mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
     imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 1
     setup_logging.assert_called()
@@ -312,6 +314,7 @@ def test_main_refresh_token(mocker: MockerFixture, patch_platformdirs: tuple[Pat
             }
         }
     }
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
     refresh_token_mock = mocker.patch('gmail_archiver.main.refresh_token',
                                       return_value={
                                           'refresh_token': 'refresh_token_value',
