@@ -89,10 +89,11 @@ INFO: Archiving 200 messages.
 ```
 
 Due to the [method of authorisation](https://developers.google.com/identity/protocols/oauth2/native-app#redirect-uri_loopback)
-for OAuth, if you need to run this on a server, you must run this tool on a machine with one (and
-the ability to run a localhost server) to get the first access token. Once this is done, transfer
-configuration and the OAuth authorisation data to the server. From that point, the access token will
-be refreshed when necessary. You must do this for every email you plan to archive.
+for OAuth, if you need to run this on a server that does not have a fully-featured browser (such as
+a headless machine), you must run this tool on a machine with one (and the ability to run a localhost
+server) to get the first access token. Once this is done, transfer configuration and the OAuth
+authorisation data to the server. From that point, the access token will be refreshed when
+necessary. You must do this for every email you plan to archive.
 
 The OAuth authorisation file is also printed at startup. Example on Linux:
 `~/.config/cache/gmail-archiver/oauth.json`. It will be stored with mode `0600`.
