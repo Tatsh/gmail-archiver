@@ -4,7 +4,7 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/gmail-archiver)](https://pypi.org/project/gmail-archiver/)
 [![GitHub tag (with filter)](https://img.shields.io/github/v/tag/Tatsh/gmail-archiver)](https://github.com/Tatsh/gmail-archiver/tags)
 [![License](https://img.shields.io/github/license/Tatsh/gmail-archiver)](https://github.com/Tatsh/gmail-archiver/blob/master/LICENSE.txt)
-[![GitHub commits since latest release (by SemVer including pre-releases)](https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.0.3/master)](https://github.com/Tatsh/gmail-archiver/compare/v0.0.3...master)
+[![GitHub commits since latest release (by SemVer including pre-releases)](https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.0.4/master)](https://github.com/Tatsh/gmail-archiver/compare/v0.0.4...master)
 [![QA](https://github.com/Tatsh/gmail-archiver/actions/workflows/qa.yml/badge.svg)](https://github.com/Tatsh/gmail-archiver/actions/workflows/qa.yml)
 [![Tests](https://github.com/Tatsh/gmail-archiver/actions/workflows/tests.yml/badge.svg)](https://github.com/Tatsh/gmail-archiver/actions/workflows/tests.yml)
 [![Coverage Status](https://coveralls.io/repos/github/Tatsh/gmail-archiver/badge.svg?branch=master)](https://coveralls.io/github/Tatsh/gmail-archiver?branch=master)
@@ -82,7 +82,7 @@ begin.
 
 ```plain
 Visit displayed URL to authorize this application. Waiting...
-127.0.0.3 - - [17/May/2025 00:50:21] "GET /?code=...&scope=https://mail.google.com/ HTTP/1.1" 200 -
+127.0.0.4 - - [17/May/2025 00:50:21] "GET /?code=...&scope=https://mail.google.com/ HTTP/1.1" 200 -
 INFO: Logging in.
 INFO: Deleting emails: False
 INFO: Archiving 200 messages.
