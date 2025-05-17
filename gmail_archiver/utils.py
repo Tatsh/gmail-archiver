@@ -6,15 +6,17 @@ from email import message_from_bytes
 from email.utils import parsedate_tz
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
-from urllib.parse import urlencode, urlunparse
+from typing import TYPE_CHECKING, Any, cast
+import http
+import http.server
 import json
 import logging
 import logging.config
+import socket
+import urllib
+import urllib.parse
 
 import requests
-
-from .constants import GOOGLE_ACCOUNTS_DOMAIN, GOOGLE_OAUTH2_DOMAIN, REDIRECT_URI
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -45,13 +47,28 @@ def setup_logging(*,
                     '%(light_green)s%(name)s%(reset)s:%(light_red)s%(funcName)s%(reset)s:'
                     '%(blue)s%(lineno)d%(reset)s - %(message)s'),
                 'no_color': no_color,
+            },
+            'simple': {
+                'format': '%(levelname)s: %(message)s',
             }
         },
         'handlers': {
             'console': {
                 'class': 'colorlog.StreamHandler',
-                'formatter': 'default',
+                'formatter': 'default' if debug else 'simple',
             }
+        },
+        'loggers': {
+            'gmail_archiver': {
+                'level': 'INFO' if not debug else 'DEBUG',
+                'handlers': ['console'],
+                'propagate': False,
+            },
+            'urllib3': {
+                'level': 'WARNING' if not debug else 'DEBUG',
+                'handlers': ['console'],
+                'propagate': False,
+            },
         },
         'version': 1
     })
@@ -63,41 +80,32 @@ def generate_oauth2_str(username: str, access_token: str) -> str:
     return f'user={username}\1auth=Bearer {access_token}\1\1'
 
 
-@cache
-def generate_permission_url(client_id: str, scope: str = 'https://mail.google.com/') -> str:
-    """Generate the URL for the OAuth2 permission request."""
-    return urlunparse(('https', GOOGLE_ACCOUNTS_DOMAIN, '/o/oauth2/v2/auth', '',
-                       urlencode({
-                           'client_id': client_id,
-                           'redirect_uri': REDIRECT_URI,
-                           'scope': scope,
-                           'response_type': 'code',
-                       }), ''))
-
-
-def generate_oauth_token() -> str:  # pragma: no cover
-    """Generate an OAuth token."""
-    return input('Enter verification code: ')
-
-
-def authorize_tokens(client_id: str, client_secret: str, authorization_code: str) -> AuthInfo:
-    """Exchange the authorization code for an access token."""
-    response = requests.post(urlunparse(('https', GOOGLE_OAUTH2_DOMAIN, '/token', '', '', '')),
+def authorize_tokens(url: str,
+                     client_id: str,
+                     client_secret: str,
+                     authorization_code: str,
+                     verifier: str,
+                     redirect_uri: str,
+                     scope: str = 'https://mail.google.com/') -> AuthInfo:
+    """Exchange the authorisation code for an access token."""
+    response = requests.post(url,
                              params={
                                  'client_id': client_id,
                                  'client_secret': client_secret,
                                  'code': authorization_code,
-                                 'redirect_uri': REDIRECT_URI,
-                                 'grant_type': 'authorization_code'
+                                 'code_verifier': verifier,
+                                 'grant_type': 'authorization_code',
+                                 'redirect_uri': redirect_uri,
+                                 'scope': scope
                              },
                              timeout=15)
     response.raise_for_status()
     return cast('AuthInfo', response.json())
 
 
-def refresh_token(client_id: str, client_secret: str, refresh_token: str) -> AuthInfo:
+def refresh_token(url: str, client_id: str, client_secret: str, refresh_token: str) -> AuthInfo:
     """Refresh the access token using the refresh token."""
-    response = requests.post(urlunparse(('https', GOOGLE_OAUTH2_DOMAIN, '/token', '', '', '')),
+    response = requests.post(url,
                              params={
                                  'client_id': client_id,
                                  'client_secret': client_secret,
@@ -122,22 +130,26 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
                    *,
                    debug: bool = False,
                    delete: bool = False) -> int:
-    """Download emails then delete them on the server."""
+    """Download emails and optionally move them to the trash."""
     if debug:
         imap_conn.debug = 4
+    log.info('Deleting emails: %s', delete)
     auth_str = generate_oauth2_str(email, access_token)
     imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
     imap_conn.select(dq('[Gmail]/All Mail'))
     before_date = (datetime.now(tz=timezone.utc).date() - timedelta(days=90)).strftime('%d-%b-%Y')
+    log.debug('Searching for emails before %s.', before_date)
     rv, result = cast('Callable[[str | None, str], tuple[str, list[bytes]]]',
                       imap_conn.search)(None, f'(BEFORE {dq(before_date)})')
     if rv != 'OK' or not result:
         log.info('No messages matched criteria.')
         return 0
+    messages = result[0].decode().split()
+    log.info('Archiving %d messages.', len(messages))
     for num in result[0].decode().split():
         rv, data = imap_conn.fetch(num, '(RFC822)')
         if rv != 'OK':
-            log.error('Error getting message #%d.', num)
+            log.error('Error getting message #%s.', num)
             return 1
         v = data[0]
         assert v is not None, 'Unexpected data[0] == None'
@@ -161,10 +173,67 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
         if rv == 'OK' and labels_raw:
             labels = [x.decode() for x in cast('list[bytes]', labels_raw)]
         out_path = path / eml_filename
-        log.debug('Writing %s to %s', num, out_path)
+        log.debug('Writing %s to %s.', num, out_path)
         out_path.write_bytes(v[1] + b'\n')
         if labels:
             (path / labels_filename).write_text(json.dumps(labels, indent=2, sort_keys=True))
         if delete:
             imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
     return 0
+
+
+def log_oauth2_error(data: dict[str, Any]) -> None:
+    """Log OAuth2 error information."""
+    if 'error' in data:
+        log.error('Error type: %s', data['error'])
+        if 'error_description' in data:
+            log.error('Description: %s', data['error_description'])
+
+
+class OAuth2Error(Exception):
+    """OAuth2 error."""
+
+
+class GoogleOAuthClient:
+    """Uses discovery to get the appropriate endpoint URIs."""
+    def __init__(self, client_id: str, client_secret: str) -> None:
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.session = requests.Session()
+        r = self.session.get('https://accounts.google.com/.well-known/openid-configuration')
+        r.raise_for_status()
+        data = r.json()
+        self.token_endpoint = data['token_endpoint']
+        self.device_authorization_endpoint = data['device_authorization_endpoint']
+        self.authorization_endpoint = data['authorization_endpoint']
+
+
+def get_localhost_redirect_uri() -> tuple[int, str]:
+    """Find an available port and return a localhost URI."""
+    s = socket.socket()
+    s.bind(('127.0.0.1', 0))
+    listen_port = s.getsockname()[1]
+    assert isinstance(listen_port, int), 'listen_port is not an int.'
+    s.close()
+    return listen_port, f'http://localhost:{listen_port}/'
+
+
+def get_auth_http_handler(
+        auth_code_callback: Callable[[str], None]) -> type[http.server.BaseHTTPRequestHandler]:
+    """Get a handler for the HTTP server."""
+    class MyHandler(http.server.BaseHTTPRequestHandler):
+        def do_HEAD(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+        def do_GET(self) -> None:  # noqa: N802
+            querydict = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if 'code' in querydict:  # pragma: no cover
+                auth_code_callback(querydict['code'][0])
+            self.do_HEAD()
+            self.wfile.write(b'<html><head><title>Authorisation result</title></head>'
+                             b'<body><p>Authorisation redirect completed. You may '
+                             b'close this window.</p></body></html>')
+
+    return MyHandler

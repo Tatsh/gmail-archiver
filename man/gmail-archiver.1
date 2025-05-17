@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "GMAIL-ARCHIVER" "1" "May 16, 2025" "0.0.0" "gmail-archiver"
+.TH "GMAIL-ARCHIVER" "1" "May 17, 2025" "0.0.0" "gmail-archiver"
 .SH NAME
 gmail-archiver \- gmail-archiver v0.0.0
 .sp
@@ -35,17 +35,22 @@ Locally archive Gmail emails.
 .SH COMMANDS
 .SS gmail\-archiver
 .sp
-Archive Gmail emails and delete them from the server.
+Archive Gmail emails and move them to the trash.
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .EX
-gmail\-archiver [OPTIONS] EMAIL OUT_DIR
+gmail\-archiver [OPTIONS] EMAIL [OUT_DIR]
 .EE
 .UNINDENT
 .UNINDENT
 .sp
 Options
+.INDENT 0.0
+.TP
+.B \-\-no\-delete
+Do not move emails to trash.
+.UNINDENT
 .INDENT 0.0
 .TP
 .B \-a, \-\-auth\-only
@@ -55,6 +60,11 @@ Only authorise the user.
 .TP
 .B \-d, \-\-debug
 Enable debug level logging.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-debug\-imap
+Enable debug level logging for IMAP.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -71,8 +81,88 @@ Required argument
 .INDENT 0.0
 .TP
 .B OUT_DIR
-Required argument
+Optional argument
 .UNINDENT
+.SH CONFIGURATION
+.sp
+Create a file at \fB${CONFIG_DIR}/gmail\-archiver/config.toml\fP\&. On Linux this is typically
+\fB~/.config/gmail\-archiver/config.toml\fP\&. The application will print the configuration file path on
+every run.
+.sp
+The file must contain the following:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+[tool.gmail\-archiver]
+client_id = \(aqclient\-id.apps.googleusercontent.com\(aq
+client_secret = \(aqclient\-secret\(aq
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+You must set up a project on \X'tty: link https://console.cloud.google.com/cloud-resource-manager'\fI\%Google Cloud\fP\X'tty: link'
+and it must have the \X'tty: link https://console.cloud.google.com/apis/library/gmail.googleapis.com'\fI\%Gmail API\fP\X'tty: link'
+enabled.
+.sp
+Then in \fBAPIs and services\fP, choose \fBCredentials\fP, \fB+ Create credentials\fP and
+\fBOAuth client ID\fP\&.
+.INDENT 0.0
+.IP \(bu 2
+\fBApplication type\fP: Web application
+.IP \(bu 2
+\fBName\fP: any name
+.UNINDENT
+.sp
+Copy and paste the client ID and secret into the above file.
+.sp
+You should protect the above file. Set it to as limited of a permission set as possible. Example:
+\fBchmod 0400 ~/.config/gmail\-archiver/config.toml\fP\&.
+.sp
+Why not use Keyring? Keyring is inappropriate for automated scenarios, unless it is purposely made
+insecure.
+.SH AUTHORISATION
+.sp
+When run, if anything is invalid about the OAuth data, you will be prompted to create it.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+$ gmail\-archiver email@gmail.com
+Using authorisation database: /home/user/.cache/gmail\-archiver/oauth.json
+Using authorisation file: /home/user/.config/gmail\-archiver/config.toml
+
+https://accounts.google.com/o/oauth2/v2/auth?client_id=....
+
+Visit displayed URL to authorize this application. Waiting...
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+In your browser, click \fBContinue\fP and then in the browser you will see the text:
+\fIAuthorisation redirect completed. You may close this window\fP\&. At that point the archiving will
+begin.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+Visit displayed URL to authorize this application. Waiting...
+127.0.0.1 \- \- [17/May/2025 00:50:21] \(dqGET /?code=...&scope=https://mail.google.com/ HTTP/1.1\(dq 200 \-
+INFO: Logging in.
+INFO: Deleting emails: False
+INFO: Archiving 200 messages.
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Due to the \X'tty: link https://developers.google.com/identity/protocols/oauth2/native-app#redirect-uri_loopback'\fI\%method of authorisation\fP\X'tty: link'
+for OAuth, if you need to run this on a server, you must run this tool on a machine with one (and
+the ability to run a localhost server) to get the first access token. Once this is done, transfer
+configuration and the OAuth authorisation data to the server. From that point, the access token will
+be refreshed when necessary. You must do this for every email you plan to archive.
+.sp
+The OAuth authorisation file is also printed at startup. Example on Linux:
+\fB~/.config/cache/gmail\-archiver/oauth.json\fP\&. It will be stored with mode \fB0600\fP\&.
 .SH AUTHOR
 Andrew Udvare <audvare@gmail.com>
 .SH COPYRIGHT
