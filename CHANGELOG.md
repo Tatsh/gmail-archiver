@@ -9,6 +9,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.0.4]
+
+### Fixed
+
+- Handle file collisions.
+
 ## [0.0.2]
 
 ### Added
@@ -19,4 +25,4 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First version.
 
-[unreleased]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.3...HEAD
+[unreleased]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.4...HEAD

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from email import message_from_bytes
 from email.utils import parsedate_tz
 from functools import cache
+from hashlib import sha1
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 import http
@@ -174,6 +175,9 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
         if rv == 'OK' and labels_raw:
             labels = [x.decode() for x in cast('list[bytes]', labels_raw)]
         out_path = path / eml_filename
+        if out_path.exists():
+            sha = sha1(v[1], usedforsecurity=False).hexdigest()[:7]
+            out_path = path / f'{number:010d}-{sha}.eml'
         log.debug('Writing %s to %s.', num, out_path)
         out_path.write_bytes(v[1] + b'\n')
         if labels:

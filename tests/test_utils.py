@@ -193,6 +193,40 @@ def test_process_no_labels(mocker: MockerFixture, tmp_path: Path) -> None:
     assert len(written_labels) == 0
 
 
+def test_archive_emails_out_path_exists(mocker: MockerFixture, tmp_path: Path) -> None:
+    email = 'user@example.com'
+    access_token = 'token'
+    imap_conn = mocker.Mock()
+    imap_conn.debug = 0
+    mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
+    imap_conn.search.return_value = ('OK', [b'1'])
+    imap_conn.select.return_value = ('OK', [b''])
+    msg_bytes = b'From: test@example.com\r\nDate: Fri, 01 Jan 2021 12:00:00 +0000\r\n\r\nBody'
+    fetch_rfc822 = ('OK', [(b'1 (RFC822 {123}', msg_bytes)])
+    fetch_labels = ('OK', [b'\\Inbox'])
+    imap_conn.fetch.side_effect = [fetch_rfc822, fetch_labels]
+    imap_conn.store.return_value = ('OK', [b''])
+    mocker.patch('gmail_archiver.utils.message_from_bytes',
+                 return_value={'Date': 'Fri, 01 Jan 2021 12:00:00 +0000'})
+    mocker.patch('gmail_archiver.utils.parsedate_tz', return_value=(2021, 1, 1, 12, 0, 0, 0, 0, 0))
+    year = '2021'
+    month = '01-Jan'
+    day = '01-Fri'
+    out_dir_path = tmp_path / email / year / month / day
+    out_dir_path.mkdir(parents=True, exist_ok=True)
+    eml_filename = '0000000001.eml'
+    eml_path = out_dir_path / eml_filename
+    eml_path.write_bytes(b'existing content')
+    mocker.patch('gmail_archiver.utils.sha1', autospec=True)
+    gmail_archiver_sha1 = mocker.patch('gmail_archiver.utils.sha1')
+    gmail_archiver_sha1.return_value.hexdigest.return_value = 'abcdef1234567890'
+    result = archive_emails(imap_conn, email, access_token, tmp_path)
+    assert result == 0
+    written_files = list(out_dir_path.glob('*.eml'))
+    assert any('-abcde.eml' in str(f) or '-abcdef1.eml' in str(f) for f in written_files)
+    assert (out_dir_path / eml_filename).read_bytes() == b'existing content'
+
+
 def test_process_no_messages(mocker: MockerFixture, tmp_path: Path) -> None:
     email = 'user@example.com'
     access_token = 'token'
