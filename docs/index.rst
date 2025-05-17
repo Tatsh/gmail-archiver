@@ -139,7 +139,7 @@ begin.
 .. code-block:: console
 
    Visit displayed URL to authorize this application. Waiting...
-   127.0.0.2 - - [17/May/2025 00:50:21] "GET /?code=...&scope=https://mail.google.com/ HTTP/1.1" 200 -
+   127.0.0.3 - - [17/May/2025 00:50:21] "GET /?code=...&scope=https://mail.google.com/ HTTP/1.1" 200 -
    INFO: Logging in.
    INFO: Deleting emails: False
    INFO: Archiving 200 messages.
