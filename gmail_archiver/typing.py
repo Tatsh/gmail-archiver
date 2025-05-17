@@ -1,7 +1,7 @@
 """Typing helpers."""
 from __future__ import annotations
 
-from typing import TypeVar, TypedDict
+from typing import TypedDict
 
 
 class Config(TypedDict, total=False):
@@ -20,11 +20,3 @@ class AuthInfo(TypedDict, total=False):
 
 AuthDataDB = dict[str, AuthInfo]
 """Dictionary of OAuth information for different users."""
-
-_T = TypeVar('_T')
-
-
-def assert_not_none(x: _T | None, message: str = 'Expected value') -> _T:
-    """Assert that ``x`` is not None."""
-    assert x is not None, message
-    return x

@@ -15,7 +15,6 @@ import logging.config
 import requests
 
 from .constants import GOOGLE_ACCOUNTS_DOMAIN, GOOGLE_OAUTH2_DOMAIN, REDIRECT_URI
-from .typing import AuthDataDB, assert_not_none
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -116,18 +115,17 @@ def dq(s: str) -> str:
     return f'"{s}"'
 
 
-def process(imap_conn: imaplib.IMAP4_SSL,
-            email: str,
-            auth_data_db: AuthDataDB,
-            out_dir: Path,
-            *,
-            debug: bool = False) -> int:
+def archive_emails(imap_conn: imaplib.IMAP4_SSL,
+                   email: str,
+                   access_token: str,
+                   out_dir: Path,
+                   *,
+                   debug: bool = False,
+                   delete: bool = False) -> int:
     """Download emails then delete them on the server."""
     if debug:
         imap_conn.debug = 4
-    auth_str = generate_oauth2_str(
-        email,
-        assert_not_none(auth_data_db[email].get('access_token'), 'access_token cannot be None'))
+    auth_str = generate_oauth2_str(email, access_token)
     imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
     imap_conn.select(dq('[Gmail]/All Mail'))
     before_date = (datetime.now(tz=timezone.utc).date() - timedelta(days=90)).strftime('%d-%b-%Y')
@@ -167,5 +165,6 @@ def process(imap_conn: imaplib.IMAP4_SSL,
         out_path.write_bytes(v[1] + b'\n')
         if labels:
             (path / labels_filename).write_text(json.dumps(labels, indent=2, sort_keys=True))
-        imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
+        if delete:
+            imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
     return 0

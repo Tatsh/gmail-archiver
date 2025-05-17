@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from gmail_archiver.constants import GOOGLE_OAUTH2_DOMAIN
 from gmail_archiver.utils import (
+    archive_emails,
     authorize_tokens,
     dq,
     generate_oauth2_str,
     generate_permission_url,
-    process,
     refresh_token,
 )
 from requests import HTTPError
@@ -17,7 +17,6 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from gmail_archiver.typing import AuthDataDB
     from pytest_mock import MockerFixture
     from requests_mock import Mocker
 
@@ -86,12 +85,10 @@ def test_dq_quotes_simple_string() -> None:
 def test_process_success(mocker: MockerFixture, tmp_path: Path) -> None:
     email = 'user@example.com'
     access_token = 'token'
-    auth_data_db: AuthDataDB = {email: {'access_token': access_token}}
     out_dir = tmp_path
     imap_conn = mocker.Mock()
     imap_conn.debug = 0
     mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
-    mocker.patch('gmail_archiver.utils.assert_not_none', side_effect=lambda v, _: v)
     # Simulate search returns two messages
     imap_conn.search.return_value = ('OK', [b'1 2'])
     imap_conn.select.return_value = ('OK', [b''])
@@ -104,7 +101,7 @@ def test_process_success(mocker: MockerFixture, tmp_path: Path) -> None:
     mocker.patch('gmail_archiver.utils.message_from_bytes',
                  return_value={'Date': 'Fri, 01 Jan 2021 12:00:00 +0000'})
     mocker.patch('gmail_archiver.utils.parsedate_tz', return_value=(2021, 1, 1, 12, 0, 0, 0, 0, 0))
-    result = process(imap_conn, email, auth_data_db, out_dir)
+    result = archive_emails(imap_conn, email, access_token, out_dir, delete=True)
     assert result == 0
     assert imap_conn.authenticate.called
     assert imap_conn.select.called
@@ -117,19 +114,113 @@ def test_process_success(mocker: MockerFixture, tmp_path: Path) -> None:
     assert len(written_labels) == 2
 
 
-def test_process_no_messages(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_process_no_delete(mocker: MockerFixture, tmp_path: Path) -> None:
     email = 'user@example.com'
     access_token = 'token'
-    auth_data_db: AuthDataDB = {email: {'access_token': access_token}}
     out_dir = tmp_path
     imap_conn = mocker.Mock()
     imap_conn.debug = 0
     mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
-    mocker.patch('gmail_archiver.utils.assert_not_none', side_effect=lambda v, _: v)
+    # Simulate search returns two messages
+    imap_conn.search.return_value = ('OK', [b'1 2'])
+    imap_conn.select.return_value = ('OK', [b''])
+    # Simulate fetch for RFC822 and X-GM-LABELS
+    msg_bytes = b'From: test@example.com\r\nDate: Fri, 01 Jan 2021 12:00:00 +0000\r\n\r\nBody'
+    fetch_rfc822 = ('OK', [(b'1 (RFC822 {123}', msg_bytes)])
+    fetch_labels = ('OK', [b'\\Inbox'])
+    imap_conn.fetch.side_effect = [fetch_rfc822, fetch_labels, fetch_rfc822, fetch_labels]
+    imap_conn.store.return_value = ('OK', [b''])
+    mocker.patch('gmail_archiver.utils.message_from_bytes',
+                 return_value={'Date': 'Fri, 01 Jan 2021 12:00:00 +0000'})
+    mocker.patch('gmail_archiver.utils.parsedate_tz', return_value=(2021, 1, 1, 12, 0, 0, 0, 0, 0))
+    result = archive_emails(imap_conn, email, access_token, out_dir)
+    assert result == 0
+    assert imap_conn.authenticate.called
+    assert imap_conn.select.called
+    assert imap_conn.search.called
+    assert imap_conn.fetch.call_count == 4
+    assert imap_conn.store.call_count == 0
+    written_files = list(tmp_path.rglob('*.eml'))
+    assert len(written_files) == 2
+    written_labels = list(tmp_path.rglob('*.labels.json'))
+    assert len(written_labels) == 2
+
+
+def test_process_invalid_date_tuple(mocker: MockerFixture, tmp_path: Path) -> None:
+    email = 'user@example.com'
+    access_token = 'token'
+    out_dir = tmp_path
+    imap_conn = mocker.Mock()
+    imap_conn.debug = 0
+    mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
+    # Simulate search returns two messages
+    imap_conn.search.return_value = ('OK', [b'1 2'])
+    imap_conn.select.return_value = ('OK', [b''])
+    # Simulate fetch for RFC822 and X-GM-LABELS
+    msg_bytes = b'From: test@example.com\r\nDate: Fri, 01 Jan 2021 12:00:00 +0000\r\n\r\nBody'
+    fetch_rfc822 = ('OK', [(b'1 (RFC822 {123}', msg_bytes)])
+    fetch_labels = ('OK', [b'\\Inbox'])
+    imap_conn.fetch.side_effect = [fetch_rfc822, fetch_labels, fetch_rfc822, fetch_labels]
+    imap_conn.store.return_value = ('OK', [b''])
+    mocker.patch('gmail_archiver.utils.message_from_bytes',
+                 return_value={'Date': 'Fri, 01 Jan 2021 12:00:00 +0000'})
+    mocker.patch('gmail_archiver.utils.parsedate_tz', return_value=None)
+    result = archive_emails(imap_conn, email, access_token, out_dir)
+    assert result == 1
+    assert imap_conn.authenticate.called
+    assert imap_conn.select.called
+    assert imap_conn.search.called
+    assert imap_conn.fetch.call_count == 1
+    assert imap_conn.store.call_count == 0
+    written_files = list(tmp_path.rglob('*.eml'))
+    assert len(written_files) == 0
+    written_labels = list(tmp_path.rglob('*.labels.json'))
+    assert len(written_labels) == 0
+
+
+def test_process_no_labels(mocker: MockerFixture, tmp_path: Path) -> None:
+    email = 'user@example.com'
+    access_token = 'token'
+    out_dir = tmp_path
+    imap_conn = mocker.Mock()
+    imap_conn.debug = 0
+    mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
+    # Simulate search returns two messages
+    imap_conn.search.return_value = ('OK', [b'1 2'])
+    imap_conn.select.return_value = ('OK', [b''])
+    # Simulate fetch for RFC822 and X-GM-LABELS
+    msg_bytes = b'From: test@example.com\r\nDate: Fri, 01 Jan 2021 12:00:00 +0000\r\n\r\nBody'
+    fetch_rfc822 = ('OK', [(b'1 (RFC822 {123}', msg_bytes)])
+    fetch_labels: tuple[str, list[Any]] = ('OK', [])
+    imap_conn.fetch.side_effect = [fetch_rfc822, fetch_labels, fetch_rfc822, fetch_labels]
+    imap_conn.store.return_value = ('OK', [b''])
+    mocker.patch('gmail_archiver.utils.message_from_bytes',
+                 return_value={'Date': 'Fri, 01 Jan 2021 12:00:00 +0000'})
+    mocker.patch('gmail_archiver.utils.parsedate_tz', return_value=(2021, 1, 1, 12, 0, 0, 0, 0, 0))
+    result = archive_emails(imap_conn, email, access_token, out_dir)
+    assert result == 0
+    assert imap_conn.authenticate.called
+    assert imap_conn.select.called
+    assert imap_conn.search.called
+    assert imap_conn.fetch.call_count == 4
+    assert imap_conn.store.call_count == 0
+    written_files = list(tmp_path.rglob('*.eml'))
+    assert len(written_files) == 2
+    written_labels = list(tmp_path.rglob('*.labels.json'))
+    assert len(written_labels) == 0
+
+
+def test_process_no_messages(mocker: MockerFixture, tmp_path: Path) -> None:
+    email = 'user@example.com'
+    access_token = 'token'
+    out_dir = tmp_path
+    imap_conn = mocker.Mock()
+    imap_conn.debug = 0
+    mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
     imap_conn.select.return_value = ('OK', [b''])
     imap_conn.search.return_value = ('NO', [b''])
     logger = mocker.patch('gmail_archiver.utils.log')
-    result = process(imap_conn, email, auth_data_db, out_dir, debug=True)
+    result = archive_emails(imap_conn, email, access_token, out_dir)
     assert result == 0
     logger.info.assert_called_with('No messages matched criteria.')
 
@@ -137,15 +228,13 @@ def test_process_no_messages(mocker: MockerFixture, tmp_path: Path) -> None:
 def test_process_search_zero_results(mocker: MockerFixture, tmp_path: Path) -> None:
     email = 'user@example.com'
     access_token = 'token'
-    auth_data_db: AuthDataDB = {email: {'access_token': access_token}}
     out_dir = tmp_path
     imap_conn = mocker.Mock()
     imap_conn.debug = 0
     mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
-    mocker.patch('gmail_archiver.utils.assert_not_none', side_effect=lambda v, _: v)
     mock_log_info = mocker.patch('gmail_archiver.utils.log.info')
     imap_conn.search.return_value = ('OK', [])
-    ret = process(imap_conn, email, auth_data_db, out_dir)
+    ret = archive_emails(imap_conn, email, access_token, out_dir)
     assert ret == 0
     mock_log_info.assert_called_once_with('No messages matched criteria.')
 
@@ -153,17 +242,15 @@ def test_process_search_zero_results(mocker: MockerFixture, tmp_path: Path) -> N
 def test_process_fetch_error(mocker: MockerFixture, tmp_path: Path) -> None:
     email = 'user@example.com'
     access_token = 'token'
-    auth_data_db: AuthDataDB = {email: {'access_token': access_token}}
     logger = mocker.patch('gmail_archiver.utils.log')
     out_dir = tmp_path
     imap_conn = mocker.Mock()
     imap_conn.debug = 0
     mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
-    mocker.patch('gmail_archiver.utils.assert_not_none', side_effect=lambda v, _: v)
     imap_conn.select.return_value = ('OK', [b''])
     imap_conn.search.return_value = ('OK', [b'1'])
     imap_conn.fetch.return_value = ('NO', [])
-    result = process(imap_conn, email, auth_data_db, out_dir)
+    result = archive_emails(imap_conn, email, access_token, out_dir, debug=True)
     assert result == 1
     logger.error.assert_called()
 
