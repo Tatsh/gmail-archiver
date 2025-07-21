@@ -81,23 +81,23 @@ warn_unreachable = true
 include = ["man", { format = "sdist", path = "tests" }]
 
 [tool.poetry.dependencies]
-click = "^8.2.0"
+click = "^8.2.1"
 colorlog = "^6.9.0"
 platformdirs = "^4.3.8"
 python = ">=3.10,<3.14"
-requests = "^2.32.3"
-tomlkit = "^0.13.2"
-typing-extensions = "^4.13.2"
+requests = "^2.32.4"
+tomlkit = "^0.13.3"
+typing-extensions = "^4.14.1"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-commitizen = "^4.7.0"
+commitizen = "^4.8.3"
 djlint = "^1.36.4"
-mypy = ">=1.12,<1.16"
-ruff = "^0.11.9"
-types-requests = "^2.32.0.20250306"
+mypy = "^1.17.0"
+ruff = "^0.12.4"
+types-requests = "^2.32.4.20250611"
 yapf = "^0.43.0"
 
 [tool.poetry.group.docs]
@@ -132,9 +132,9 @@ optional = true
 
 [tool.poetry.group.tests.dependencies]
 mock = "^5.2.0"
-pytest = "^8.3.5"
-pytest-cov = "^6.1.1"
-pytest-mock = "^3.14.0"
+pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
+pytest-mock = "^3.14.1"
 requests-mock = "^1.12.1"
 
 [tool.poetry.group.tests.dependencies.coveralls]
