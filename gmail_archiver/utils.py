@@ -227,12 +227,12 @@ def get_auth_http_handler(
         auth_code_callback: Callable[[str], None]) -> type[http.server.BaseHTTPRequestHandler]:
     """Get a handler for the HTTP server."""
     class MyHandler(http.server.BaseHTTPRequestHandler):
-        def do_HEAD(self) -> None:  # noqa: N802
+        def do_HEAD(self) -> None:
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
 
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             querydict = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if 'code' in querydict:  # pragma: no cover
                 auth_code_callback(querydict['code'][0])
