@@ -9,7 +9,7 @@ gmail-archiver
 
    .. image:: https://img.shields.io/pypi/v/gmail-archiver
       :target: https://pypi.org/project/gmail-archiver/
-      :alt: PyPI - Version
+      :alt: PyPI Version
 
    .. image:: https://img.shields.io/github/v/tag/Tatsh/gmail-archiver
       :target: https://github.com/Tatsh/gmail-archiver/tags
@@ -19,9 +19,13 @@ gmail-archiver
       :target: https://github.com/Tatsh/gmail-archiver/blob/master/LICENSE.txt
       :alt: License
 
-   .. image:: https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.1.1/master
-      :target: https://github.com/Tatsh/gmail-archiver/compare/v0.1.1...master
+   .. image:: https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.0.4/master
+      :target: https://github.com/Tatsh/gmail-archiver/compare/v0.0.4...master
       :alt: GitHub commits since latest release (by SemVer including pre-releases)
+
+   .. image:: https://github.com/Tatsh/gmail-archiver/actions/workflows/codeql.yml/badge.svg
+      :target: https://github.com/Tatsh/gmail-archiver/actions/workflows/codeql.yml
+      :alt: CodeQL
 
    .. image:: https://github.com/Tatsh/gmail-archiver/actions/workflows/qa.yml/badge.svg
       :target: https://github.com/Tatsh/gmail-archiver/actions/workflows/qa.yml
