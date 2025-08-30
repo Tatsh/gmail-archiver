@@ -162,7 +162,7 @@ def test_main_new_token_authorization(mocker: MockerFixture, patch_platformdirs:
         def __exit__(self, *args: object) -> None:
             pass
 
-        def handle_request(self) -> None:
+        def handle_request(self) -> None:  # noqa: PLR6301
             nonlocal callback, callback_called
             assert callback is not None
             callback('auth_code')
@@ -225,7 +225,7 @@ def test_main_new_token_authorization_invalid_db(mocker: MockerFixture,
         def __exit__(self, *args: object) -> None:
             pass
 
-        def handle_request(self) -> None:
+        def handle_request(self) -> None:  # noqa: PLR6301
             nonlocal callback, callback_called
             assert callback is not None
             callback('auth_code')

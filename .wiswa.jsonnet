@@ -5,8 +5,8 @@
   project_name: 'gmail-archiver',
   version: '0.0.4',
   want_main: true,
-  citation+: {
-    'date-released': '2025-05-16',
+  copilot: {
+    intro: 'gmail-archiver is a tool to locally archive Gmail emails.',
   },
   pyproject+: {
     project+: {

@@ -25,54 +25,10 @@ if TYPE_CHECKING:
 
     from .typing import AuthInfo
 
+__all__ = ('archive_emails', 'authorize_tokens', 'get_auth_http_handler',
+           'get_localhost_redirect_uri', 'refresh_token')
+
 log = logging.getLogger(__name__)
-
-
-def setup_logging(*,
-                  debug: bool = False,
-                  force_color: bool = False,
-                  no_color: bool = False) -> None:  # pragma: no cover
-    """Set up logging configuration."""
-    logging.config.dictConfig({
-        'disable_existing_loggers': True,
-        'root': {
-            'level': 'DEBUG' if debug else 'INFO',
-            'handlers': ['console'],
-        },
-        'formatters': {
-            'default': {
-                '()': 'colorlog.ColoredFormatter',
-                'force_color': force_color,
-                'format': (
-                    '%(light_cyan)s%(asctime)s%(reset)s | %(log_color)s%(levelname)-8s%(reset)s | '
-                    '%(light_green)s%(name)s%(reset)s:%(light_red)s%(funcName)s%(reset)s:'
-                    '%(blue)s%(lineno)d%(reset)s - %(message)s'),
-                'no_color': no_color,
-            },
-            'simple': {
-                'format': '%(levelname)s: %(message)s',
-            }
-        },
-        'handlers': {
-            'console': {
-                'class': 'colorlog.StreamHandler',
-                'formatter': 'default' if debug else 'simple',
-            }
-        },
-        'loggers': {
-            'gmail_archiver': {
-                'level': 'INFO' if not debug else 'DEBUG',
-                'handlers': ['console'],
-                'propagate': False,
-            },
-            'urllib3': {
-                'level': 'WARNING' if not debug else 'DEBUG',
-                'handlers': ['console'],
-                'propagate': False,
-            },
-        },
-        'version': 1
-    })
 
 
 @cache

@@ -18,6 +18,7 @@ import secrets
 import urllib
 import urllib.parse
 
+from bascom import setup_logging
 from platformdirs import user_cache_path, user_config_path
 import click
 import tomlkit
@@ -29,7 +30,6 @@ from .utils import (
     get_auth_http_handler,
     get_localhost_redirect_uri,
     refresh_token,
-    setup_logging,
 )
 
 if TYPE_CHECKING:
@@ -65,7 +65,11 @@ def main(email: str,
          force_refresh: bool = False,
          no_delete: bool = False) -> None:
     """Archive Gmail emails and move them to the trash."""  # noqa: DOC501
-    setup_logging(debug=debug)
+    setup_logging(debug=debug,
+                  loggers={'gmail_archiver': {
+                      'handlers': ('console',),
+                      'propagate': False
+                  }})
     oauth_file = user_cache_path('gmail-archiver', ensure_exists=True) / 'oauth.json'
     config_file = user_config_path('gmail-archiver', ensure_exists=True) / 'config.toml'
     try:
