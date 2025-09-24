@@ -1,11 +1,12 @@
-(import 'defaults.libjsonnet') + {
-  // Project-specific
+local utils = import 'utils.libjsonnet';
+
+{
   description: 'Locally archive Gmail emails.',
   keywords: ['backup', 'email', 'google', 'gmail'],
   project_name: 'gmail-archiver',
   version: '0.0.4',
   want_main: true,
-  copilot: {
+  copilot+: {
     intro: 'gmail-archiver is a tool to locally archive Gmail emails.',
   },
   pyproject+: {
@@ -15,44 +16,29 @@
       },
     },
     tool+: {
+      coverage+: {
+        report+: { omit+: ['typing.py'] },
+        run+: { omit+: ['typing.py'] },
+      },
       poetry+: {
         dependencies+: {
-          platformdirs: '^4.3.8',
-          requests: '^2.32.3',
-          tomlkit: '^0.13.2',
+          platformdirs: utils.latestPypiPackageVersionCaret('platformdirs'),
+          requests: utils.latestPypiPackageVersionCaret('requests'),
+          tomlkit: utils.latestPypiPackageVersionCaret('tomlkit'),
         },
         group+: {
           dev+: {
             dependencies+: {
-              'types-requests': '^2.32.0.20250306',
+              'types-requests': utils.latestPypiPackageVersionCaret('types-requests'),
             },
           },
           tests+: {
             dependencies+: {
-              'requests-mock': '^1.12.1',
+              'requests-mock': utils.latestPypiPackageVersionCaret('requests-mock'),
             },
           },
         },
       },
     },
   },
-  // Common
-  authors: [
-    {
-      'family-names': 'Udvare',
-      'given-names': 'Andrew',
-      email: 'audvare@gmail.com',
-      name: '%s %s' % [self['given-names'], self['family-names']],
-    },
-  ],
-  local funding_name = '%s2' % std.asciiLower(self.github_username),
-  github_username: 'Tatsh',
-  github+: {
-    funding+: {
-      ko_fi: funding_name,
-      liberapay: funding_name,
-      patreon: funding_name,
-    },
-  },
-  mastodon_id: '109370961877277568',
 }
