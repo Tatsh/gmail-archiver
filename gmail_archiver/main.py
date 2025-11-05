@@ -9,13 +9,11 @@ from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 import contextlib
 import hashlib
-import http
 import http.server
 import imaplib
 import json
 import logging
 import secrets
-import urllib
 import urllib.parse
 
 from bascom import setup_logging

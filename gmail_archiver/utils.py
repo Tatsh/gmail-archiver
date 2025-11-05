@@ -8,13 +8,10 @@ from functools import cache
 from hashlib import sha1
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
-import http
 import http.server
 import json
 import logging
-import logging.config
 import socket
-import urllib
 import urllib.parse
 
 import requests
