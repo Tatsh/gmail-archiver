@@ -19,8 +19,8 @@ gmail-archiver
       :target: https://github.com/Tatsh/gmail-archiver/blob/master/LICENSE.txt
       :alt: License
 
-   .. image:: https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.0.4/master
-      :target: https://github.com/Tatsh/gmail-archiver/compare/v0.0.4...master
+   .. image:: https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.0.5/master
+      :target: https://github.com/Tatsh/gmail-archiver/compare/v0.0.5...master
       :alt: GitHub commits since latest release (by SemVer including pre-releases)
 
    .. image:: https://github.com/Tatsh/gmail-archiver/actions/workflows/codeql.yml/badge.svg
@@ -143,7 +143,7 @@ begin.
 .. code-block:: console
 
    Visit displayed URL to authorize this application. Waiting...
-   127.0.0.4 - - [17/May/2025 00:50:21] "GET /?code=...&scope=https://mail.google.com/ HTTP/1.1" 200 -
+   127.0.0.5 - - [17/May/2025 00:50:21] "GET /?code=...&scope=https://mail.google.com/ HTTP/1.1" 200 -
    INFO: Logging in.
    INFO: Deleting emails: False
    INFO: Archiving 200 messages.

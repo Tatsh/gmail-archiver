@@ -4,7 +4,7 @@ local utils = import 'utils.libjsonnet';
   description: 'Locally archive Gmail emails.',
   keywords: ['backup', 'email', 'google', 'gmail'],
   project_name: 'gmail-archiver',
-  version: '0.0.4',
+  version: '0.0.5',
   want_main: true,
   copilot+: {
     intro: 'gmail-archiver is a tool to locally archive Gmail emails.',
