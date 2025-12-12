@@ -11,6 +11,7 @@ colorlog
 commitizen
 conftest
 coveragerc
+coverallsapp
 dataclasses
 datatable
 datatables
@@ -39,6 +40,7 @@ jsonnet
 jsonschema
 launchable
 lextudio
+libera
 libjsonnet
 linters
 modindex
@@ -49,6 +51,7 @@ numpy
 numpydoc
 onefile
 parsedate
+pavelzw
 pipx
 platformdirs
 prodvers
