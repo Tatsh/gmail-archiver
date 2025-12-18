@@ -30,7 +30,6 @@ foxundermoon
 genindex
 globaltoc
 googleusercontent
-hoverxref
 htmlcov
 intersphinx
 isort
@@ -43,6 +42,7 @@ lextudio
 libera
 libjsonnet
 linters
+manylinux
 modindex
 mypy
 namedtuples
