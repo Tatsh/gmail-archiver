@@ -1,0 +1,24 @@
+apps:
+  gmail-archiver:
+    command: 'bin/gmail-archiver'
+    plugs:
+      - 'home'
+      - 'network'
+      - 'network-bind'
+base: 'core24'
+confinement: 'strict'
+description: 'Locally archive Gmail emails.'
+grade: 'stable'
+name: 'gmail-archiver'
+parts:
+  gmail-archiver:
+    plugin: 'poetry'
+    source: '.'
+    stage-packages: []
+platforms:
+  amd64:
+    build-on: 'amd64'
+  arm64:
+    build-on: 'arm64'
+summary: 'Locally archive Gmail emails.'
+version: '0.0.5'
