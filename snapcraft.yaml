@@ -7,12 +7,19 @@ apps:
       - 'network-bind'
 base: 'core24'
 confinement: 'strict'
+contact: 'https://github.com/Tatsh/gmail-archiver/issues'
 description: 'Locally archive Gmail emails.'
+donation: 'https://buymeacoffee.com/Tatsh'
 grade: 'stable'
+issues: 'https://github.com/Tatsh/gmail-archiver/issues'
+license: 'MIT'
 name: 'gmail-archiver'
 parts:
   gmail-archiver:
-    plugin: 'poetry'
+    build-packages: []
+    plugin: 'python'
+    python-packages:
+      - '.'
     source: '.'
     stage-packages: []
 platforms:
@@ -20,5 +27,8 @@ platforms:
     build-on: 'amd64'
   arm64:
     build-on: 'arm64'
+source-code: 'https://github.com/Tatsh/gmail-archiver'
 summary: 'Locally archive Gmail emails.'
+title: 'gmail-archiver'
 version: '0.0.5'
+website: 'https://tatsh.github.io/gmail-archiver/'
