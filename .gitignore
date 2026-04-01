@@ -10,6 +10,7 @@
 .directory
 .pnp.*
 .venv/
+/.wiswa-ci/
 /.yarn/install-state.gz
 /build/
 /dist/

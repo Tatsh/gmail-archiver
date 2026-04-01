@@ -19,9 +19,13 @@ files. Launch each agent sequentially using the Agent tool with subagent_type `g
 telling it to follow the corresponding `.claude/agents/<name>.md` file. Scope each agent to only the
 changed files, not the entire project.
 
+You must skip any agents that are not relevant to the changed files (e.g. if no Click command files
+changed, skip the click-auditor).
+
 ### When Python code is being committed
 
-If any changed files are under `gmail_archiver/` or `tests/`, run the following agents **in order**:
+If any changed files are under `gmail_archiver/` or `tests/`, run the following
+agents **in order**:
 
 1. **python-moderniser** - upgrade to modern Python features.
 1. **click-auditor** - validate Click command consistency. **Only run if files under
@@ -40,8 +44,7 @@ If any changed files are under `gmail_archiver/` or `tests/`, run the following 
   with the relevant commit. **Only run when changes affect users**:
   files under `gmail_archiver/`, `tests/`, or
   dependency/version changes in `pyproject.toml`. **Skip for**: workflows, CI config, `.claude/`,
-  `.cursor/`, `.github/instructions/`, documentation-only changes,
-  and other non-user-facing files.
+  `.cursor/`, `.github/instructions/`, documentation-only changes, and other non-user-facing files.
 
 ## Analysing changes
 
@@ -79,8 +82,8 @@ no hand-written code changed, this is a **cruft update**. Indicators:
 
 - Only Wiswa-managed files changed (workflows,
   `package.json`, `pyproject.toml`, `.pre-commit-config.yaml`, `.claude/agents/`,
-  `.cursor/rules/`, `.github/instructions/`,
-  `CITATION.cff`, `.vscode/dictionary.txt`, `uv.lock`, `.wiswa.jsonnet`, etc.).
+  `.cursor/rules/`, `.github/instructions/`, `CITATION.cff`, `.vscode/dictionary.txt`, `uv.lock`,
+  `.wiswa.jsonnet`, etc.).
 - No files under the primary module or `tests/` changed.
 
 Commit everything in a single commit with the subject `cruft: update`. Include a body summarising
@@ -134,7 +137,7 @@ For Python files, strip the `gmail_archiver/` prefix and replace `/` with `.` (l
 
 ### Trailers
 
-- `Closes: #N` - when a commit closes a GitHub issue. If it is another project, use the full URI.
+- `Closes: #N` - when a commit closes an issue. If it is another project, use the full URI.
 - `Fixes: #N` - when a commit fixes a bug reported in an issue. If it is another project, use the
   full URI.
 - `Related: #N` - when a commit is related to an issue but does not fully close or fix it. If it is
@@ -147,14 +150,18 @@ For Python files, strip the `gmail_archiver/` prefix and replace `/` with `.` (l
 
 ## Making commits
 
+Run commands separately. Do not chain commands with `&&` or `;`. Do not use scripts.
+
 1. Stage files for each logical commit using `git add` with specific file paths.
 2. If `CHANGELOG.md` was updated by the changelog agent, stage it with the relevant commit.
-3. Create a unique temp file with `mktemp /tmp/commit-msg-XXXXXXXX`, write the commit message there
-   using the **Write** tool (not Bash `cat`), then commit with `git commit -S -s -F <tempfile>`.
-   Multiple Claude instances may run concurrently, so never use a fixed path.
-4. If a pre-commit hook fails, fix the issue, re-stage (use appropriate agent if there is one), and
+3. Create the directory if it does not exist: `mkdir -p .wiswa-ci`. Skip if it already exists.
+4. Create a unique temp file with `mktemp .wiswa-ci/message-XXXXXXXX`. Write the commit message
+   there using the **Write** tool (not Bash `echo` or `cat`)
+5. Commit with `git commit -S -s -F <tempfile>` without using the
+   sandbox.
+6. If a pre-commit hook fails, fix the issue, re-stage (use appropriate agent if there is one), and
    try to commit again.
-5. After all commits, run `git status` to verify clean state.
+7. After all commits, run `git status` to verify clean state.
 
 ## Rules
 

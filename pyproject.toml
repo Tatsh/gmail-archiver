@@ -8,7 +8,7 @@ dev = [
   "cz-path>=0.0.6",
   "mypy>=1.19.1",
   "ruff>=0.15.7",
-  "types-requests>=2.32.4.20260107",
+  "types-requests>=2.32.4.20260324",
   "yapf>=0.43.0",
 ]
 docs = [
@@ -50,7 +50,7 @@ dependencies = [
   "bascom>=0.1.2",
   "click>=8.3.1",
   "platformdirs>=4.9.4",
-  "requests>=2.32.5",
+  "requests>=2.33.0",
   "tomlkit>=0.14.0",
   "typing-extensions>=4.15.0",
 ]
@@ -221,7 +221,8 @@ max-returns = 10
 max-statements = 100
 
 [tool.uv]
-default-groups = ["dev"]
+default-groups = "all"
+exclude-newer = "1 week"
 
 [tool.yapf]
 align_closing_bracket_with_visual_indent = true

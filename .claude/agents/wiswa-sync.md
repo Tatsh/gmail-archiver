@@ -11,8 +11,8 @@ again would produce the same result.
 ## Context
 
 - **Wiswa source**: `~/dev/wiswa`
-- **Defaults**: `~/dev/wiswa/wiswa-jsonnet/defaults.libjsonnet` — merged with `.wiswa.jsonnet`
-- **Default Python deps**: `~/dev/wiswa/wiswa-jsonnet/defaults/python-deps.libjsonnet`
+- **Defaults**: `~/dev/wiswa/wiswa-jsonnet/defaults.libsonnet` — merged with `.wiswa.jsonnet`
+- **Default Python deps**: `~/dev/wiswa/wiswa-jsonnet/defaults/python-deps.libsonnet`
 - **Config**: `.wiswa.jsonnet` — only contains overrides on top of defaults
 
 The jsonnet evaluation is: `defaults + .wiswa.jsonnet` (deep merge with `+:`). Only what differs
@@ -100,7 +100,7 @@ For example, if `[tool.ruff.lint.pylint]` in `pyproject.toml` changes, the overr
 
 2. **Read the changed managed files** (e.g. `pyproject.toml`, `package.json`) to identify what changed.
 
-3. **Read the relevant defaults** (`defaults.libjsonnet`, `defaults/python-deps.libjsonnet`, etc.)
+3. **Read the relevant defaults** (`defaults.libsonnet`, `defaults/python-deps.libsonnet`, etc.)
    to determine what is already provided by Wiswa.
 
 4. **Determine the minimal change** to `.wiswa.jsonnet`:
@@ -119,7 +119,7 @@ For example, if `[tool.ruff.lint.pylint]` in `pyproject.toml` changes, the overr
 
 ## Dependency version patterns
 
-Use these helpers from `utils.libjsonnet` (already imported in `.wiswa.jsonnet`):
+Use these helpers from `utils.libsonnet` (already imported in `.wiswa.jsonnet`):
 
 - `utils.latestPypiPackageVersionCaret('name')` — resolves to `^X.Y.Z` at generation time.
 - For pinned or non-caret versions, use a string literal: `'^1.0'`, `'>=2.0,<3.0'`.
@@ -185,7 +185,7 @@ pyproject+: {
 - Only modify `.wiswa.jsonnet`.
 - Use `+:` (merge) operators, never replace entire sections.
 - Preserve existing structure and style (indentation, comment grouping).
-- If a dependency already exists in the defaults (`python-deps.libjsonnet`), do not add it to
+- If a dependency already exists in the defaults (`python-deps.libsonnet`), do not add it to
   `.wiswa.jsonnet` — it is already provided.
 - If unsure whether a change belongs in `.wiswa.jsonnet` or is already a default, read the defaults
   first.

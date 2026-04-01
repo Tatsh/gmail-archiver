@@ -22,11 +22,13 @@ instruction files under `.github/instructions/`.
 
 ## Rules
 
+- Never attempt to use scripts to mass-edit files.
 - Never suppress or disable linter rules to make checks pass. Fix the root cause.
 - Follow all project conventions when fixing issues (see `.github/instructions/`).
 - Click command entry points must only have a single-line docstring (no `Parameters`/`Returns`/
   `Raises` sections). Click uses the docstring as CLI help text.
-- Use `http.HTTPStatus` constants (e.g. `HTTPStatus.FORBIDDEN`) instead of bare integer status codes.
+- Use `http.HTTPStatus` constants (e.g. `HTTPStatus.FORBIDDEN`) instead of bare integer status
+  codes.
 - Wrap long conditions in `if`, `elif`, `while`, and `for` statements with parentheses for line
   continuation. Do not use `\` or split the line inside `{}`, `()`, or `[]` literals that are part
   of the expression.

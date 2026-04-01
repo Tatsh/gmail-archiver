@@ -36,7 +36,11 @@ conventions defined in the instruction files under `.github/instructions/`.
   Additional third-party loggers can be added as needed:
 
   ```python
-  setup_logging(debug=debug, loggers={'gmail_archiver': {}, 'urllib3': {}, 'soupsieve': {}})
+  setup_logging(debug=debug, loggers={
+      'gmail_archiver': {},
+      'urllib3': {},
+      'soupsieve': {},
+  })
   ```
 
   In library modules, define a module-level logger (not exported):
@@ -209,8 +213,8 @@ modules, or functions:
 - `` :py:func:`gmail_archiver.string.slugify` `` for functions
 - `` :py:class:`gmail_archiver.typing.ProbeDict` `` for classes
 - `` :py:meth:`MyClass.my_method` `` for methods
-- Use `~` to shorten the displayed name: `` :py:func:`~gmail_archiver.string.slugify` `` renders as
-  `slugify`
+- Use `~` to shorten the displayed name:
+  `` :py:func:`~gmail_archiver.string.slugify` `` renders as `slugify`
 - This applies to third-party types as well: `` :py:class:`~pathlib.Path` ``,
   `` :py:func:`~json.dumps` ``, `` :py:class:`~click.Context` ``, etc.
 
