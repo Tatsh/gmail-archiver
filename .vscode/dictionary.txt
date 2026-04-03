@@ -31,7 +31,6 @@ esbonio
 examplerefreshtoken
 excinfo
 filevers
-fontawesome
 foxundermoon
 functools
 genindex
@@ -78,6 +77,7 @@ pydantic
 pydocstyle
 pyinstaller
 pylint
+pylock
 pypa
 pypi
 pyproject

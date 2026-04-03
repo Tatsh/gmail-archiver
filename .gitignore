@@ -4,12 +4,13 @@
 .*.swp
 .*_cache/
 .DS_Store*
-.claude/settings.local.json
 .coverage
 .cspellcache
 .directory
 .pnp.*
 .venv/
+/.claude/settings.json
+/.claude/settings.local.json
 /.wiswa-ci/
 /.yarn/install-state.gz
 /build/
