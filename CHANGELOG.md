@@ -9,6 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+### Fixed
+
+- Restored the IMAP connection debug level after `archive_emails` when debug mode is enabled.
+
 ## [0.0.5]
 
 ### Added

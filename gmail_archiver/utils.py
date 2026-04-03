@@ -1,6 +1,7 @@
 """Utilities."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from email import message_from_bytes
 from email.utils import parsedate_tz
@@ -17,10 +18,24 @@ import urllib.parse
 import requests
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
     import imaplib
 
     from .typing import AuthInfo
+
+
+@contextmanager
+def _imap_debug_session(imap_conn: imaplib.IMAP4_SSL, *, debug: bool) -> Iterator[None]:
+    if not debug:
+        yield
+        return
+    previous = imap_conn.debug
+    imap_conn.debug = 4
+    try:
+        yield
+    finally:
+        imap_conn.debug = previous
+
 
 __all__ = ('archive_emails', 'authorize_tokens', 'get_auth_http_handler',
            'get_localhost_redirect_uri', 'refresh_token')
@@ -86,58 +101,58 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
                    debug: bool = False,
                    delete: bool = False) -> int:
     """Download emails and optionally move them to the trash."""
-    if debug:
-        imap_conn.debug = 4
-    log.info('Deleting emails: %s', delete)
-    auth_str = generate_oauth2_str(email, access_token)
-    imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
-    imap_conn.select(dq('[Gmail]/All Mail'))
-    before_date = (datetime.now(tz=timezone.utc).date() - timedelta(days=days)).strftime('%d-%b-%Y')
-    log.debug('Searching for emails before %s.', before_date)
-    rv, result = cast('Callable[[str | None, str], tuple[str, list[bytes]]]',
-                      imap_conn.search)(None, f'(BEFORE {dq(before_date)})')
-    if rv != 'OK' or not result:
-        log.info('No messages matched criteria.')
+    with _imap_debug_session(imap_conn, debug=debug):
+        log.info('Deleting emails: %s', delete)
+        auth_str = generate_oauth2_str(email, access_token)
+        imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
+        imap_conn.select(dq('[Gmail]/All Mail'))
+        before_date = (datetime.now(tz=timezone.utc).date() -
+                       timedelta(days=days)).strftime('%d-%b-%Y')
+        log.debug('Searching for emails before %s.', before_date)
+        rv, result = cast('Callable[[str | None, str], tuple[str, list[bytes]]]',
+                          imap_conn.search)(None, f'(BEFORE {dq(before_date)})')
+        if rv != 'OK' or not result:
+            log.info('No messages matched criteria.')
+            return 0
+        messages = result[0].decode().split()
+        log.info('Archiving %d messages.', len(messages))
+        for num in result[0].decode().split():
+            rv, data = imap_conn.fetch(num, '(RFC822)')
+            if rv != 'OK':
+                log.error('Error getting message #%s.', num)
+                return 1
+            v = data[0]
+            assert v is not None, 'Unexpected data[0] == None'
+            assert isinstance(v, tuple), 'Unexpected non-tuple type of v'
+            msg = message_from_bytes(v[1])
+            date_tuple = parsedate_tz(cast('str', msg['Date']))
+            if not date_tuple:
+                log.error('Error converting date: %s', msg['Date'])
+                return 1
+            the_date = datetime(*cast('tuple[int, int, int, int, int, int]', date_tuple[0:7]),
+                                tzinfo=timezone.utc)
+            month = the_date.strftime('%m-%b')
+            day = the_date.strftime('%d-%a')
+            path = Path(out_dir).resolve(strict=True) / email / str(date_tuple[0]) / month / day
+            path.mkdir(parents=True, exist_ok=True)
+            number = int(num)
+            eml_filename = f'{number:010d}.eml'
+            rv, labels_raw = imap_conn.fetch(num, '(X-GM-LABELS)')
+            labels = None
+            labels_filename = f'{number:010d}.labels.json'
+            if rv == 'OK' and labels_raw:
+                labels = [x.decode() for x in cast('list[bytes]', labels_raw)]
+            out_path = path / eml_filename
+            if out_path.exists():
+                sha = sha1(v[1], usedforsecurity=False).hexdigest()[:7]
+                out_path = path / f'{number:010d}-{sha}.eml'
+            log.debug('Writing %s to %s.', num, out_path)
+            out_path.write_bytes(v[1] + b'\n')
+            if labels:
+                (path / labels_filename).write_text(json.dumps(labels, indent=2, sort_keys=True))
+            if delete:
+                imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
         return 0
-    messages = result[0].decode().split()
-    log.info('Archiving %d messages.', len(messages))
-    for num in result[0].decode().split():
-        rv, data = imap_conn.fetch(num, '(RFC822)')
-        if rv != 'OK':
-            log.error('Error getting message #%s.', num)
-            return 1
-        v = data[0]
-        assert v is not None, 'Unexpected data[0] == None'
-        assert isinstance(v, tuple), 'Unexpected non-tuple type of v'
-        msg = message_from_bytes(v[1])
-        date_tuple = parsedate_tz(cast('str', msg['Date']))
-        if not date_tuple:
-            log.error('Error converting date: %s', msg['Date'])
-            return 1
-        the_date = datetime(*cast('tuple[int, int, int, int, int, int]', date_tuple[0:7]),
-                            tzinfo=timezone.utc)
-        month = the_date.strftime('%m-%b')
-        day = the_date.strftime('%d-%a')
-        path = Path(out_dir).resolve(strict=True) / email / str(date_tuple[0]) / month / day
-        path.mkdir(parents=True, exist_ok=True)
-        number = int(num)
-        eml_filename = f'{number:010d}.eml'
-        rv, labels_raw = imap_conn.fetch(num, '(X-GM-LABELS)')
-        labels = None
-        labels_filename = f'{number:010d}.labels.json'
-        if rv == 'OK' and labels_raw:
-            labels = [x.decode() for x in cast('list[bytes]', labels_raw)]
-        out_path = path / eml_filename
-        if out_path.exists():
-            sha = sha1(v[1], usedforsecurity=False).hexdigest()[:7]
-            out_path = path / f'{number:010d}-{sha}.eml'
-        log.debug('Writing %s to %s.', num, out_path)
-        out_path.write_bytes(v[1] + b'\n')
-        if labels:
-            (path / labels_filename).write_text(json.dumps(labels, indent=2, sort_keys=True))
-        if delete:
-            imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
-    return 0
 
 
 def log_oauth2_error(data: dict[str, Any]) -> None:

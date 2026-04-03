@@ -270,6 +270,22 @@ def test_process_fetch_error(mocker: MockerFixture, tmp_path: Path) -> None:
     result = archive_emails(imap_conn, email, access_token, out_dir, debug=True)
     assert result == 1
     logger.error.assert_called()
+    assert imap_conn.debug == 0
+
+
+def test_archive_emails_restores_imap_debug_when_no_matches(mocker: MockerFixture,
+                                                            tmp_path: Path) -> None:
+    email = 'user@example.com'
+    access_token = 'token'
+    out_dir = tmp_path
+    imap_conn = mocker.Mock()
+    imap_conn.debug = 0
+    mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
+    imap_conn.select.return_value = ('OK', [b''])
+    imap_conn.search.return_value = ('OK', [])
+    ret = archive_emails(imap_conn, email, access_token, out_dir, debug=True)
+    assert ret == 0
+    assert imap_conn.debug == 0
 
 
 def test_refresh_token_success(requests_mock: Mocker) -> None:
