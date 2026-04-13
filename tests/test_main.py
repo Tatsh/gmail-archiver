@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 import json
@@ -298,6 +299,155 @@ def test_main_new_token_authorization_no_code_returned(mocker: MockerFixture,
     data = json.loads(oauth_file.read_text())
     assert email in data
     assert 'Did not obtain an authorisation code.' in result.output
+
+
+def test_main_new_auth_aborts_non_mutable_oauth_db(mocker: MockerFixture,
+                                                   patch_platformdirs: tuple[Path, Path],
+                                                   tmp_path: Path, runner: CliRunner) -> None:
+    oauth_file, _config_file = patch_platformdirs
+    email = 'readonly@example.com'
+    oauth_file.write_text('{}')
+    inner = {
+        'access_token': 'a',
+        'expiration_time': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+    }
+    frozen_db = MappingProxyType({email: inner})
+    mocker.patch('gmail_archiver.main.json.loads', return_value=frozen_db)
+    mocker.patch('gmail_archiver.main.tomlkit.loads').return_value.unwrap.return_value = {
+        'tool': {
+            'gmail-archiver': {
+                'client_id': 'test_client_id',
+                'client_secret': 'test_client_secret'
+            }
+        }
+    }
+    mocker.patch('gmail_archiver.main.authorize_tokens',
+                 return_value={
+                     'refresh_token': 'refresh_token_value',
+                     'expires_in': 3600
+                 })
+    mocker.patch('gmail_archiver.main.setup_logging')
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
+    mocker.patch('gmail_archiver.main.get_localhost_redirect_uri',
+                 return_value=(1234, 'http://localhost:1234'))
+    callback: Callable[..., Any] | None = None
+
+    def get_handler(auth_code_callback: Callable[[str], None]) -> Any:
+        nonlocal callback
+        callback = auth_code_callback
+        return MagicMock()
+
+    mocker.patch('gmail_archiver.main.get_auth_http_handler', get_handler)
+
+    class MockHTTPServer:
+        def __init__(self, _: tuple[int, str], __: Callable[..., Any]) -> None:
+            pass
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+        def handle_request(self) -> None:  # noqa: PLR6301
+            nonlocal callback
+            assert callback is not None
+            callback('auth_code')
+
+    mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
+    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
+    assert result.exit_code == 1
+    assert 'JSON object' in result.output
+
+
+def test_main_new_auth_aborts_missing_refresh_in_token_response(mocker: MockerFixture,
+                                                                patch_platformdirs: tuple[Path,
+                                                                                          Path],
+                                                                tmp_path: Path,
+                                                                runner: CliRunner) -> None:
+    oauth_file, _config_file = patch_platformdirs
+    email = 'norefreshtoken@example.com'
+    auth_db = {
+        'access_token': 'a',
+        'expiration_time': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+    }
+    oauth_file.write_text(json.dumps({email: auth_db}))
+    mocker.patch('gmail_archiver.main.tomlkit.loads').return_value.unwrap.return_value = {
+        'tool': {
+            'gmail-archiver': {
+                'client_id': 'test_client_id',
+                'client_secret': 'test_client_secret'
+            }
+        }
+    }
+    authorize_tokens = mocker.patch('gmail_archiver.main.authorize_tokens',
+                                    return_value={'expires_in': 3600})
+    mocker.patch('gmail_archiver.main.setup_logging')
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
+    mocker.patch('gmail_archiver.main.get_localhost_redirect_uri',
+                 return_value=(1234, 'http://localhost:1234'))
+    callback: Callable[..., Any] | None = None
+
+    def get_handler(auth_code_callback: Callable[[str], None]) -> Any:
+        nonlocal callback
+        callback = auth_code_callback
+        return MagicMock()
+
+    mocker.patch('gmail_archiver.main.get_auth_http_handler', get_handler)
+
+    class MockHTTPServer:
+        def __init__(self, _: tuple[int, str], __: Callable[..., Any]) -> None:
+            pass
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+        def handle_request(self) -> None:  # noqa: PLR6301
+            nonlocal callback
+            assert callback is not None
+            callback('auth_code')
+
+    mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
+    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
+    assert result.exit_code == 1
+    assert 'refresh_token' in result.output
+    authorize_tokens.assert_called()
+
+
+def test_main_refresh_aborts_non_mutable_oauth_db(mocker: MockerFixture,
+                                                  patch_platformdirs: tuple[Path, Path],
+                                                  tmp_path: Path, runner: CliRunner) -> None:
+    oauth_file, _config_file = patch_platformdirs
+    email = 'refresh-readonly@example.com'
+    oauth_file.write_text('{}')
+    expired = make_auth_data(expired=True)
+    frozen_db = MappingProxyType({email: expired})
+    mocker.patch('gmail_archiver.main.json.loads', return_value=frozen_db)
+    mocker.patch('gmail_archiver.main.tomlkit.loads').return_value.unwrap.return_value = {
+        'tool': {
+            'gmail-archiver': {
+                'client_id': 'test_client_id',
+                'client_secret': 'test_client_secret'
+            }
+        }
+    }
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
+    refresh_token_mock = mocker.patch('gmail_archiver.main.refresh_token',
+                                      return_value={
+                                          'refresh_token': 'refresh_token_value',
+                                          'expires_in': 3600
+                                      })
+    mocker.patch('gmail_archiver.main.setup_logging')
+    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
+    assert result.exit_code == 1
+    assert 'JSON object' in result.output
+    refresh_token_mock.assert_called()
 
 
 def test_main_refresh_token(mocker: MockerFixture, patch_platformdirs: tuple[Path, Path],

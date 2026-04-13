@@ -134,9 +134,13 @@ def main(email: str,
         auth_data['expiration_time'] = (datetime.now(tz=timezone.utc) +
                                         timedelta(seconds=expires_in)).isoformat()
         log.debug('New auth data for %s: %s', email, auth_data)
-        assert isinstance(auth_data_db, MutableMapping)
+        if not isinstance(auth_data_db, MutableMapping):
+            click.echo('Authorisation database must be a JSON object.', err=True)
+            raise click.Abort
         auth_data_db[email] = auth_data
-        assert 'refresh_token' in auth_data_db[email], 'refresh_token not in auth_data_db[email]'
+        if 'refresh_token' not in auth_data_db[email]:
+            click.echo('Authorisation response did not include a refresh_token.', err=True)
+            raise click.Abort
         oauth_file.write_text(json.dumps(auth_data_db, allow_nan=False, sort_keys=True, indent=2))
     elif ((expiration_time and
            (datetime.fromisoformat(expiration_time) <= datetime.now(timezone.utc)))
@@ -149,7 +153,9 @@ def main(email: str,
         expires_in = auth_data['expires_in']
         auth_data['expiration_time'] = (datetime.now(timezone.utc) +
                                         timedelta(seconds=expires_in)).isoformat()
-        assert isinstance(auth_data_db, MutableMapping)
+        if not isinstance(auth_data_db, MutableMapping):
+            click.echo('Authorisation database must be a JSON object.', err=True)
+            raise click.Abort
         auth_data_db[email] = auth_data
         log.debug('New auth data for %s: %s', email, auth_data)
         auth_data_db[email]['refresh_token'] = ref_token

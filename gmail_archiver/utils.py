@@ -42,10 +42,26 @@ __all__ = ('archive_emails', 'authorize_tokens', 'get_auth_http_handler',
 
 log = logging.getLogger(__name__)
 
+_LISTEN_PORT_TYPE_ERROR = 'Expected an integer listen port from the bound socket.'
+
 
 @cache
 def generate_oauth2_str(username: str, access_token: str) -> str:
-    """Generate the OAuth2 string for IMAP authentication."""
+    """
+    Generate the OAuth2 string for IMAP authentication.
+
+    Parameters
+    ----------
+    username : str
+        The account user name.
+    access_token : str
+        The OAuth2 access token.
+
+    Returns
+    -------
+    str
+        The encoded string for IMAP XOAUTH2 authentication.
+    """
     return f'user={username}\1auth=Bearer {access_token}\1\1'
 
 
@@ -56,7 +72,31 @@ def authorize_tokens(url: str,
                      verifier: str,
                      redirect_uri: str,
                      scope: str = 'https://mail.google.com/') -> AuthInfo:
-    """Exchange the authorisation code for an access token."""
+    """
+    Exchange the authorisation code for an access token.
+
+    Parameters
+    ----------
+    url : str
+        The token endpoint URL.
+    client_id : str
+        The OAuth client identifier.
+    client_secret : str
+        The OAuth client secret.
+    authorization_code : str
+        The authorisation code from the redirect.
+    verifier : str
+        The PKCE code verifier.
+    redirect_uri : str
+        The redirect URI used in the authorisation request.
+    scope : str
+        The requested OAuth scope.
+
+    Returns
+    -------
+    AuthInfo
+        Token response fields from the authorisation server.
+    """
     response = requests.post(url,
                              params={
                                  'client_id': client_id,
@@ -73,7 +113,25 @@ def authorize_tokens(url: str,
 
 
 def refresh_token(url: str, client_id: str, client_secret: str, refresh_token: str) -> AuthInfo:
-    """Refresh the access token using the refresh token."""
+    """
+    Refresh the access token using the refresh token.
+
+    Parameters
+    ----------
+    url : str
+        The token endpoint URL.
+    client_id : str
+        The OAuth client identifier.
+    client_secret : str
+        The OAuth client secret.
+    refresh_token : str
+        The refresh token.
+
+    Returns
+    -------
+    AuthInfo
+        Token response fields from the authorisation server.
+    """
     response = requests.post(url,
                              params={
                                  'client_id': client_id,
@@ -88,7 +146,19 @@ def refresh_token(url: str, client_id: str, client_secret: str, refresh_token: s
 
 @cache
 def dq(s: str) -> str:
-    """Quote a string for use in an IMAP search."""
+    """
+    Quote a string for use in an IMAP search.
+
+    Parameters
+    ----------
+    s : str
+        The string to quote.
+
+    Returns
+    -------
+    str
+        The string wrapped in double quotes for IMAP.
+    """
     return f'"{s}"'
 
 
@@ -100,7 +170,31 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
                    *,
                    debug: bool = False,
                    delete: bool = False) -> int:
-    """Download emails and optionally move them to the trash."""
+    """
+    Download emails and optionally move them to the trash.
+
+    Parameters
+    ----------
+    imap_conn : imaplib.IMAP4_SSL
+        The authenticated IMAP connection.
+    email : str
+        The mailbox account label used in output paths.
+    access_token : str
+        The OAuth2 access token for authentication.
+    out_dir : Path
+        The root directory for archived messages.
+    days : int
+        Archive messages older than this many days.
+    debug : bool
+        When True, enable verbose IMAP protocol logging.
+    delete : bool
+        When True, move archived messages to trash.
+
+    Returns
+    -------
+    int
+        ``0`` on success, ``1`` if an error occurred while processing messages.
+    """
     with _imap_debug_session(imap_conn, debug=debug):
         log.info('Deleting emails: %s', delete)
         auth_str = generate_oauth2_str(email, access_token)
@@ -122,8 +216,12 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
                 log.error('Error getting message #%s.', num)
                 return 1
             v = data[0]
-            assert v is not None, 'Unexpected data[0] == None'
-            assert isinstance(v, tuple), 'Unexpected non-tuple type of v'
+            if v is None:
+                log.error('Unexpected empty message data for message #%s.', num)
+                return 1
+            if not isinstance(v, tuple):
+                log.error('Unexpected message data type for message #%s.', num)
+                return 1
             msg = message_from_bytes(v[1])
             date_tuple = parsedate_tz(cast('str', msg['Date']))
             if not date_tuple:
@@ -182,18 +280,46 @@ class GoogleOAuthClient:
 
 
 def get_localhost_redirect_uri() -> tuple[int, str]:
-    """Find an available port and return a localhost URI."""
+    """
+    Find an available port and return a localhost URI.
+
+    Returns
+    -------
+    tuple[int, str]
+        The listen port and ``http://localhost:{port}/`` redirect URI.
+
+    Raises
+    ------
+    TypeError
+        If the bound socket does not report an integer port.
+    """
     s = socket.socket()
-    s.bind(('127.0.0.1', 0))
-    listen_port = s.getsockname()[1]
-    assert isinstance(listen_port, int), 'listen_port is not an int.'
-    s.close()
+    try:
+        s.bind(('127.0.0.1', 0))
+        listen_port_raw = s.getsockname()[1]
+        if not isinstance(listen_port_raw, int):
+            raise TypeError(_LISTEN_PORT_TYPE_ERROR)
+        listen_port = listen_port_raw
+    finally:
+        s.close()
     return listen_port, f'http://localhost:{listen_port}/'
 
 
 def get_auth_http_handler(
         auth_code_callback: Callable[[str], None]) -> type[http.server.BaseHTTPRequestHandler]:
-    """Get a handler for the HTTP server."""
+    """
+    Build a request handler class for the local authorisation redirect server.
+
+    Parameters
+    ----------
+    auth_code_callback : Callable[[str], None]
+        Called with the authorisation code from the query string.
+
+    Returns
+    -------
+    type[http.server.BaseHTTPRequestHandler]
+        The handler class to pass to :py:class:`~http.server.HTTPServer`.
+    """
     class MyHandler(http.server.BaseHTTPRequestHandler):
         def do_HEAD(self) -> None:
             self.send_response(200)

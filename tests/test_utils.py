@@ -256,6 +256,38 @@ def test_process_search_zero_results(mocker: MockerFixture, tmp_path: Path) -> N
     mock_log_info.assert_any_call('No messages matched criteria.')
 
 
+def test_archive_emails_fetch_payload_none(mocker: MockerFixture, tmp_path: Path) -> None:
+    email = 'user@example.com'
+    access_token = 'token'
+    logger = mocker.patch('gmail_archiver.utils.log')
+    out_dir = tmp_path
+    imap_conn = mocker.Mock()
+    imap_conn.debug = 0
+    mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
+    imap_conn.select.return_value = ('OK', [b''])
+    imap_conn.search.return_value = ('OK', [b'1'])
+    imap_conn.fetch.return_value = ('OK', [None])
+    result = archive_emails(imap_conn, email, access_token, out_dir)
+    assert result == 1
+    logger.error.assert_called_with('Unexpected empty message data for message #%s.', '1')
+
+
+def test_archive_emails_fetch_payload_not_tuple(mocker: MockerFixture, tmp_path: Path) -> None:
+    email = 'user@example.com'
+    access_token = 'token'
+    logger = mocker.patch('gmail_archiver.utils.log')
+    out_dir = tmp_path
+    imap_conn = mocker.Mock()
+    imap_conn.debug = 0
+    mocker.patch('gmail_archiver.utils.generate_oauth2_str', return_value='oauth_str')
+    imap_conn.select.return_value = ('OK', [b''])
+    imap_conn.search.return_value = ('OK', [b'1'])
+    imap_conn.fetch.return_value = ('OK', [b'raw-bytes'])
+    result = archive_emails(imap_conn, email, access_token, out_dir)
+    assert result == 1
+    logger.error.assert_called_with('Unexpected message data type for message #%s.', '1')
+
+
 def test_process_fetch_error(mocker: MockerFixture, tmp_path: Path) -> None:
     email = 'user@example.com'
     access_token = 'token'
@@ -368,6 +400,15 @@ def test_get_localhost_redirect_uri_returns_valid_port_and_url(mocker: MockerFix
     mock_sock_instance.close.assert_called_once()
 
 
+def test_get_localhost_redirect_uri_raises_when_port_not_int(mocker: MockerFixture) -> None:
+    mock_socket = mocker.patch('gmail_archiver.utils.socket.socket')
+    mock_sock_instance = mock_socket.return_value
+    mock_sock_instance.getsockname.return_value = ('127.0.0.1', 'not-an-int')
+    with pytest.raises(TypeError, match='integer listen port'):
+        get_localhost_redirect_uri()
+    mock_sock_instance.close.assert_called_once()
+
+
 def test_get_auth_http_handler_calls_callback_with_code(mocker: MockerFixture) -> None:
     class MockBaseHTTPRequestHandler:
         path = ''
@@ -385,8 +426,9 @@ def test_get_auth_http_handler_calls_callback_with_code(mocker: MockerFixture) -
     callback = mocker.MagicMock()
     handler_cls = get_auth_http_handler(callback)
     mocker.MagicMock()
-    handler = handler_cls()  # type: ignore[call-arg]
-    handler.do_GET()  # type: ignore[attr-defined]
-    handler.send_response.assert_called_once_with(200)  # type: ignore[attr-defined]
-    handler.send_header.assert_called_once_with(  # type: ignore[attr-defined]
+    handler = handler_cls()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+    handler.do_GET()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    handler.send_response.assert_called_once_with(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        200)
+    handler.send_header.assert_called_once_with(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         'Content-type', 'text/html')
