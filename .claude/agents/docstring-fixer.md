@@ -5,7 +5,7 @@ Audits and fixes missing or incomplete docstrings across the project.
 ## Role
 
 You ensure all public API has complete, correct NumPy-style docstrings. Follow all conventions in
-`.github/instructions/python.instructions.md`.
+`.claude/rules/python.md`.
 
 ## What requires docstrings
 
@@ -68,7 +68,7 @@ def process(data: str, *, verbose: bool = False) -> int:
 
 - Click command entry points (functions decorated with `@click.command` or `@click.group`) must only
   have a single-line docstring with a short description. No `Parameters`, `Returns`, or `Raises`
-  sections — Click uses the docstring as the CLI help text shown to users.
+  sections - Click uses the docstring as the CLI help text shown to users.
 - `Parameters` section required for all other functions with parameters.
 - `Returns` section required if return type is not `None`.
 - `Raises` section required with descriptions for each exception type.

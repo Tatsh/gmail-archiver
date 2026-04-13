@@ -1,4 +1,5 @@
 anchore
+Ångström
 appdir
 appimage
 appinfo
@@ -22,6 +23,7 @@ datatable
 datatables
 debugpy
 docstrings
+doctree
 doctrees
 dunder
 eeyore
@@ -31,6 +33,7 @@ esbonio
 examplerefreshtoken
 excinfo
 filevers
+flathub
 foxundermoon
 functools
 genindex
@@ -41,6 +44,7 @@ htmlcov
 intersphinx
 isort
 itertools
+jinja
 jsonnet
 jsonschema
 kwargs
@@ -85,6 +89,7 @@ pytest
 regen
 rstcheck
 schemafile
+sdist
 setattr
 shellcheck
 shellformat
@@ -111,9 +116,9 @@ venv
 vers
 virtualenv
 wiswa
+wiswa's
 xcrun
 xoauth
 yapf
 yapfignore
 yarnrc
-ångström

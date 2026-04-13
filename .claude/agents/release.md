@@ -27,8 +27,6 @@ checks, bump the version, and push.
    - **copy-editor** - to fix prose in the changelog entries.
    - **qa-fixer** - to format and fix any lint/spelling issues.
 
-1. **Generate man pages.** Run `yarn gen-manpage` and then `git add man/`.
-
 1. **Run `pre-commit run -a`** to ensure all hooks pass. Fix any issues before proceeding.
 
 1. **Record the current HEAD** before bumping: `git rev-parse HEAD` (save this as `PRE_BUMP_REF`).
@@ -40,6 +38,8 @@ checks, bump the version, and push.
    1. **Stop work immediately and alert the user.** Do not attempt to work around the failure.
 
 1. **Run `uv lock`** to update `uv.lock` with the new version.
+
+1. **Generate man pages.** Run `yarn gen-manpage` and then `git add man/`.
 
 1. **Commit the version bump.** Stage all changed files and commit with
    `git commit -S -s -m 'bump: vOLD → vNEW'` (replace OLD/NEW with actual versions).

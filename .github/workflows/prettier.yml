@@ -8,11 +8,11 @@ jobs:
         with:
           key: "${{ runner.os }}-yarn-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}"
           path: '~/.yarn/berry'
-          restore-keys: '${ runner.os }}-yarn'
+          restore-keys: '${{ runner.os }}-yarn'
       - name: 'Install dependencies (Yarn)'
         run: 'yarn'
       - name: 'Check formatting (Prettier)'
-        run: 'yarn prettier -c .'
+        run: 'yarn prettier --check .'
 name: 'Prettier'
 'on':
   pull_request:
