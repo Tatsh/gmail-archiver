@@ -9,6 +9,15 @@ local utils = import 'utils.libjsonnet';
   want_main: true,
   want_flatpak: true,
   publishing+: { flathub: 'sh.tat.gmail-archiver' },
+  tests_pyproject+: {
+    tool+: {
+      ruff+: {
+        lint+: {
+          'extend-ignore'+: ['ASYNC240', 'RUF029'],
+        },
+      },
+    },
+  },
   pyproject+: {
     project+: {
       scripts: {
@@ -19,6 +28,18 @@ local utils = import 'utils.libjsonnet';
       coverage+: {
         report+: { omit+: ['typing.py'] },
         run+: { omit+: ['typing.py'] },
+      },
+      pytest+: {
+        ini_options+: {
+          asyncio_mode: 'auto',
+        },
+      },
+      ruff+: {
+        lint+: {
+          'per-file-ignores'+: {
+            'gmail_archiver/main.py'+: ['PLR0914'],
+          },
+        },
       },
       poetry+: {
         dependencies+: {

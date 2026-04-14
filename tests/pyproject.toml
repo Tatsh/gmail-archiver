@@ -7,7 +7,6 @@ extend = "../pyproject.toml"
 extend-ignore = [
   "ARG001",
   "ARG002",
-  "ASYNC240",
   "D100",
   "D101",
   "D102",
@@ -19,10 +18,11 @@ extend-ignore = [
   "INP001",
   "PLC0415",
   "PLR2004",
-  "RUF029",
   "S101",
   "S105",
   "S106",
+  "ASYNC240",
+  "RUF029",
 ]
 
 [tool.ruff.lint.pep8-naming]
