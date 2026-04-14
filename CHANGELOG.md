@@ -9,6 +9,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+### Changed
+
+- Migrated from synchronous to asynchronous architecture. Public API functions
+  (`archive_emails`, `authorize_tokens`, `refresh_token`) are now coroutines and must be awaited.
+  HTTP requests now use `niquests` instead of `requests`, and IMAP operations use `aioimaplib`
+  instead of the standard library IMAP client. The CLI entry point remains synchronous and bridges
+  to the async implementation internally.
+
 ### Fixed
 
 - Restored the IMAP connection debug level after `archive_emails` when debug mode is enabled.

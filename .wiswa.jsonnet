@@ -22,19 +22,17 @@ local utils = import 'utils.libjsonnet';
       },
       poetry+: {
         dependencies+: {
+          aioimaplib: utils.latestPypiPackageVersionCaret('aioimaplib'),
+          anyio: utils.latestPypiPackageVersionCaret('anyio'),
+          niquests: utils.latestPypiPackageVersionCaret('niquests'),
           platformdirs: utils.latestPypiPackageVersionCaret('platformdirs'),
-          requests: utils.latestPypiPackageVersionCaret('requests'),
           tomlkit: utils.latestPypiPackageVersionCaret('tomlkit'),
         },
         group+: {
-          dev+: {
-            dependencies+: {
-              'types-requests': utils.latestPypiPackageVersionCaret('types-requests'),
-            },
-          },
           tests+: {
             dependencies+: {
-              'requests-mock': utils.latestPypiPackageVersionCaret('requests-mock'),
+              'pytest-asyncio': utils.latestPypiPackageVersionCaret('pytest-asyncio'),
+              mock: utils.latestPypiPackageVersionCaret('mock'),
             },
           },
         },

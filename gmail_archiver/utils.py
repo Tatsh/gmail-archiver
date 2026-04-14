@@ -1,47 +1,51 @@
 """Utilities."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from email import message_from_bytes
 from email.utils import parsedate_tz
 from functools import cache
 from hashlib import sha1
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+import asyncio
 import http.server
 import json
 import logging
 import socket
 import urllib.parse
 
-import requests
+from anyio import Path as AsyncPath
+import niquests
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
-    import imaplib
+    from collections.abc import AsyncIterator, Callable
+
+    import aioimaplib  # type: ignore[import-untyped]
 
     from .typing import AuthInfo
 
 
-@contextmanager
-def _imap_debug_session(imap_conn: imaplib.IMAP4_SSL, *, debug: bool) -> Iterator[None]:
+@asynccontextmanager
+async def _imap_debug_session(*, debug: bool) -> AsyncIterator[None]:  # noqa: RUF029
+    aioimaplib_logger = logging.getLogger('aioimaplib.aioimaplib')
     if not debug:
         yield
         return
-    previous = imap_conn.debug
-    imap_conn.debug = 4
+    previous = aioimaplib_logger.level
+    aioimaplib_logger.setLevel(logging.DEBUG)
     try:
         yield
     finally:
-        imap_conn.debug = previous
+        aioimaplib_logger.setLevel(previous)
 
 
-__all__ = ('archive_emails', 'authorize_tokens', 'get_auth_http_handler',
+__all__ = ('GoogleOAuthClient', 'archive_emails', 'authorize_tokens', 'get_auth_http_handler',
            'get_localhost_redirect_uri', 'refresh_token')
 
 log = logging.getLogger(__name__)
 
+_FETCH_MIN_LINES = 2
 _LISTEN_PORT_TYPE_ERROR = 'Expected an integer listen port from the bound socket.'
 
 
@@ -65,13 +69,13 @@ def generate_oauth2_str(username: str, access_token: str) -> str:
     return f'user={username}\1auth=Bearer {access_token}\1\1'
 
 
-def authorize_tokens(url: str,
-                     client_id: str,
-                     client_secret: str,
-                     authorization_code: str,
-                     verifier: str,
-                     redirect_uri: str,
-                     scope: str = 'https://mail.google.com/') -> AuthInfo:
+async def authorize_tokens(url: str,
+                           client_id: str,
+                           client_secret: str,
+                           authorization_code: str,
+                           verifier: str,
+                           redirect_uri: str,
+                           scope: str = 'https://mail.google.com/') -> AuthInfo:
     """
     Exchange the authorisation code for an access token.
 
@@ -97,22 +101,24 @@ def authorize_tokens(url: str,
     AuthInfo
         Token response fields from the authorisation server.
     """
-    response = requests.post(url,
-                             params={
-                                 'client_id': client_id,
-                                 'client_secret': client_secret,
-                                 'code': authorization_code,
-                                 'code_verifier': verifier,
-                                 'grant_type': 'authorization_code',
-                                 'redirect_uri': redirect_uri,
-                                 'scope': scope
-                             },
-                             timeout=15)
+    async with niquests.AsyncSession() as session:
+        response = await session.post(url,
+                                      params={
+                                          'client_id': client_id,
+                                          'client_secret': client_secret,
+                                          'code': authorization_code,
+                                          'code_verifier': verifier,
+                                          'grant_type': 'authorization_code',
+                                          'redirect_uri': redirect_uri,
+                                          'scope': scope
+                                      },
+                                      timeout=15)
     response.raise_for_status()
     return cast('AuthInfo', response.json())
 
 
-def refresh_token(url: str, client_id: str, client_secret: str, refresh_token: str) -> AuthInfo:
+async def refresh_token(url: str, client_id: str, client_secret: str,
+                        refresh_token: str) -> AuthInfo:
     """
     Refresh the access token using the refresh token.
 
@@ -132,14 +138,15 @@ def refresh_token(url: str, client_id: str, client_secret: str, refresh_token: s
     AuthInfo
         Token response fields from the authorisation server.
     """
-    response = requests.post(url,
-                             params={
-                                 'client_id': client_id,
-                                 'client_secret': client_secret,
-                                 'refresh_token': refresh_token,
-                                 'grant_type': 'refresh_token',
-                             },
-                             timeout=15)
+    async with niquests.AsyncSession() as session:
+        response = await session.post(url,
+                                      params={
+                                          'client_id': client_id,
+                                          'client_secret': client_secret,
+                                          'grant_type': 'refresh_token',
+                                          'refresh_token': refresh_token,
+                                      },
+                                      timeout=15)
     response.raise_for_status()
     return cast('AuthInfo', response.json())
 
@@ -162,26 +169,26 @@ def dq(s: str) -> str:
     return f'"{s}"'
 
 
-def archive_emails(imap_conn: imaplib.IMAP4_SSL,
-                   email: str,
-                   access_token: str,
-                   out_dir: Path,
-                   days: int = 90,
-                   *,
-                   debug: bool = False,
-                   delete: bool = False) -> int:
+async def archive_emails(imap_conn: aioimaplib.IMAP4_SSL,
+                         email: str,
+                         access_token: str,
+                         out_dir: AsyncPath,
+                         days: int = 90,
+                         *,
+                         debug: bool = False,
+                         delete: bool = False) -> int:
     """
     Download emails and optionally move them to the trash.
 
     Parameters
     ----------
-    imap_conn : imaplib.IMAP4_SSL
+    imap_conn : aioimaplib.IMAP4_SSL
         The authenticated IMAP connection.
     email : str
         The mailbox account label used in output paths.
     access_token : str
         The OAuth2 access token for authentication.
-    out_dir : Path
+    out_dir : AsyncPath
         The root directory for archived messages.
     days : int
         Archive messages older than this many days.
@@ -195,61 +202,69 @@ def archive_emails(imap_conn: imaplib.IMAP4_SSL,
     int
         ``0`` on success, ``1`` if an error occurred while processing messages.
     """
-    with _imap_debug_session(imap_conn, debug=debug):
+    async with _imap_debug_session(debug=debug):
         log.info('Deleting emails: %s', delete)
-        auth_str = generate_oauth2_str(email, access_token)
-        imap_conn.authenticate('XOAUTH2', lambda _: auth_str.encode())
-        imap_conn.select(dq('[Gmail]/All Mail'))
+        await imap_conn.xoauth2(email, access_token.encode())
+        await imap_conn.select(dq('[Gmail]/All Mail'))
         before_date = (datetime.now(tz=timezone.utc).date() -
                        timedelta(days=days)).strftime('%d-%b-%Y')
         log.debug('Searching for emails before %s.', before_date)
-        rv, result = cast('Callable[[str | None, str], tuple[str, list[bytes]]]',
-                          imap_conn.search)(None, f'(BEFORE {dq(before_date)})')
-        if rv != 'OK' or not result:
-            log.info('No messages matched criteria.')
-            return 0
-        messages = result[0].decode().split()
+        response = await imap_conn.search(f'BEFORE {dq(before_date)}')
+        match response.result:
+            case 'OK' if response.lines and response.lines[0]:
+                messages = response.lines[0].decode().split()
+                if not messages:
+                    log.info('No messages matched criteria.')
+                    return 0
+            case _:
+                log.info('No messages matched criteria.')
+                return 0
         log.info('Archiving %d messages.', len(messages))
-        for num in result[0].decode().split():
-            rv, data = imap_conn.fetch(num, '(RFC822)')
-            if rv != 'OK':
+        resolved = await AsyncPath(out_dir).resolve()
+        for num in messages:
+            fetch_response = await imap_conn.fetch(num, '(RFC822)')
+            if fetch_response.result != 'OK':
                 log.error('Error getting message #%s.', num)
                 return 1
-            v = data[0]
-            if v is None:
+            if len(fetch_response.lines) < _FETCH_MIN_LINES:
                 log.error('Unexpected empty message data for message #%s.', num)
                 return 1
-            if not isinstance(v, tuple):
+            raw_message = fetch_response.lines[1]
+            if not isinstance(raw_message, (bytes, bytearray)):
                 log.error('Unexpected message data type for message #%s.', num)
                 return 1
-            msg = message_from_bytes(v[1])
-            date_tuple = parsedate_tz(cast('str', msg['Date']))
-            if not date_tuple:
+            msg = message_from_bytes(bytes(raw_message))
+            if not (date_tuple := parsedate_tz(cast('str', msg['Date']))):
                 log.error('Error converting date: %s', msg['Date'])
                 return 1
             the_date = datetime(*cast('tuple[int, int, int, int, int, int]', date_tuple[0:7]),
                                 tzinfo=timezone.utc)
             month = the_date.strftime('%m-%b')
             day = the_date.strftime('%d-%a')
-            path = Path(out_dir).resolve(strict=True) / email / str(date_tuple[0]) / month / day
-            path.mkdir(parents=True, exist_ok=True)
+            path = resolved / email / str(date_tuple[0]) / month / day
+            await path.mkdir(parents=True, exist_ok=True)
             number = int(num)
             eml_filename = f'{number:010d}.eml'
-            rv, labels_raw = imap_conn.fetch(num, '(X-GM-LABELS)')
+            labels_response = await imap_conn.fetch(num, '(X-GM-LABELS)')
             labels = None
             labels_filename = f'{number:010d}.labels.json'
-            if rv == 'OK' and labels_raw:
-                labels = [x.decode() for x in cast('list[bytes]', labels_raw)]
+            if labels_response.result == 'OK' and labels_response.lines:
+                labels = [
+                    x.decode() if isinstance(x, (bytes, bytearray)) else str(x)
+                    for x in labels_response.lines
+                ]
             out_path = path / eml_filename
-            if out_path.exists():
-                sha = sha1(v[1], usedforsecurity=False).hexdigest()[:7]
+            if await out_path.exists():
+                sha = sha1(bytes(raw_message), usedforsecurity=False).hexdigest()[:7]
                 out_path = path / f'{number:010d}-{sha}.eml'
             log.debug('Writing %s to %s.', num, out_path)
-            out_path.write_bytes(v[1] + b'\n')
+            write_tasks: list[Any] = [out_path.write_bytes(bytes(raw_message) + b'\n')]
             if labels:
-                (path / labels_filename).write_text(json.dumps(labels, indent=2, sort_keys=True))
+                write_tasks.append((path / labels_filename).write_text(
+                    json.dumps(labels, indent=2, sort_keys=True)))
+            await asyncio.gather(*write_tasks)
             if delete:
-                imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
+                await imap_conn.store(num, '+X-GM-LABELS', '\\Trash')
         return 0
 
 
@@ -268,15 +283,32 @@ class OAuth2Error(Exception):
 class GoogleOAuthClient:
     """Uses discovery to get the appropriate endpoint URIs."""
     def __init__(self, client_id: str, client_secret: str) -> None:
+        self.authorization_endpoint = ''
+        """OAuth authorisation endpoint URL populated by :py:meth:`discover`."""
         self.client_id = client_id
+        """OAuth client identifier."""
         self.client_secret = client_secret
-        self.session = requests.Session()
-        r = self.session.get('https://accounts.google.com/.well-known/openid-configuration')
+        """OAuth client secret."""
+        self.device_authorization_endpoint = ''
+        """Device authorisation endpoint URL populated by :py:meth:`discover`."""
+        self.token_endpoint = ''
+        """Token endpoint URL populated by :py:meth:`discover`."""
+
+    async def discover(self) -> None:
+        """
+        Fetch OpenID Connect discovery document and populate endpoints.
+
+        Queries Google's well-known OpenID Connect configuration and sets
+        :py:attr:`authorization_endpoint`, :py:attr:`device_authorization_endpoint`,
+        and :py:attr:`token_endpoint`.
+        """
+        async with niquests.AsyncSession() as session:
+            r = await session.get('https://accounts.google.com/.well-known/openid-configuration')
         r.raise_for_status()
         data = r.json()
-        self.token_endpoint = data['token_endpoint']
-        self.device_authorization_endpoint = data['device_authorization_endpoint']
         self.authorization_endpoint = data['authorization_endpoint']
+        self.device_authorization_endpoint = data['device_authorization_endpoint']
+        self.token_endpoint = data['token_endpoint']
 
 
 def get_localhost_redirect_uri() -> tuple[int, str]:

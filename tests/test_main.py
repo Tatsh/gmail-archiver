@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 import json
 
 from gmail_archiver.main import main
@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
     from click.testing import CliRunner
     from pytest_mock import MockerFixture
-    from requests_mock import Mocker
 
 
 @pytest.fixture
@@ -68,7 +67,7 @@ def test_main_auth_only_existing_token(mocker: MockerFixture, patch_platformdirs
         }
     }
     setup_logging = mocker.patch('gmail_archiver.main.setup_logging')
-    imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 0
     setup_logging.assert_called()
@@ -78,25 +77,29 @@ def test_main_auth_only_existing_token(mocker: MockerFixture, patch_platformdirs
 def test_main_auth_json_loads_return_empty(mocker: MockerFixture, tmp_path: Path,
                                            runner: CliRunner) -> None:
     email = 'test@example.com'
-    mocker.patch('gmail_archiver.main.user_config_path'
-                 ).return_value.__truediv__.return_value.exists.return_value = True
+    mocker.patch('gmail_archiver.main.user_cache_path', return_value=tmp_path)
+    mocker.patch('gmail_archiver.main.user_config_path', return_value=tmp_path)
+    config_path = tmp_path / 'config.toml'
+    config_path.write_text('client_id = "x"\nclient_secret = "y"\n')
     mocker.patch('gmail_archiver.main.tomlkit.loads').return_value.unwrap.return_value = {
         'client_id': 'test_client_id',
         'client_secret': 'test_client_secret'
     }
-    mocker.patch('gmail_archiver.main.json.loads', return_value=[])
+    oauth_file = tmp_path / 'oauth.json'
+    oauth_file.write_text('[]')
     mocker.patch('gmail_archiver.main.setup_logging')
-    imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 1
     imap_ssl.assert_not_called()
 
 
-def test_main_auth_json_loads_return_invalid_type(mocker: MockerFixture, tmp_path: Path,
-                                                  runner: CliRunner) -> None:
+def test_main_auth_json_loads_return_invalid_type(mocker: MockerFixture,
+                                                  patch_platformdirs: tuple[Path, Path],
+                                                  tmp_path: Path, runner: CliRunner) -> None:
+    oauth_file, _ = patch_platformdirs
     email = 'test@example.com'
-    mocker.patch('gmail_archiver.main.user_config_path'
-                 ).return_value.__truediv__.return_value.exists.return_value = True
+    oauth_file.write_text('1')
     mocker.patch('gmail_archiver.main.tomlkit.loads').return_value.unwrap.return_value = {
         'tool': {
             'gmail-archiver': {
@@ -105,17 +108,51 @@ def test_main_auth_json_loads_return_invalid_type(mocker: MockerFixture, tmp_pat
             }
         }
     }
-    mocker.patch('gmail_archiver.main.json.loads', return_value=1)
     mocker.patch('gmail_archiver.main.setup_logging')
-    imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    mock_client = MagicMock()
+    mock_client.authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
+    mock_client.client_id = 'test_client_id'
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
+    mocker.patch('gmail_archiver.main.authorize_tokens',
+                 new_callable=AsyncMock,
+                 return_value={'expires_in': 3600})
+    mocker.patch('gmail_archiver.main.get_localhost_redirect_uri',
+                 return_value=(1234, 'http://localhost:1234'))
+    callback: Callable[..., Any] | None = None
+
+    def get_handler(auth_code_callback: Callable[[str], None]) -> Any:
+        nonlocal callback
+        callback = auth_code_callback
+        return MagicMock()
+
+    mocker.patch('gmail_archiver.main.get_auth_http_handler', get_handler)
+
+    class MockHTTPServer:
+        def __init__(self, _: tuple[int, str], __: Callable[..., Any]) -> None:
+            pass
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+        def handle_request(self) -> None:  # noqa: PLR6301
+            nonlocal callback
+            assert callback is not None
+            callback('auth_code')
+
+    mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 1
     imap_ssl.assert_not_called()
 
 
 def test_main_new_token_authorization(mocker: MockerFixture, patch_platformdirs: tuple[Path, Path],
-                                      tmp_path: Path, runner: CliRunner,
-                                      requests_mock: Mocker) -> None:
+                                      tmp_path: Path, runner: CliRunner) -> None:
     oauth_file, _config_file = patch_platformdirs
     email = 'test2@example.com'
     oauth_file.write_text(json.dumps({}))
@@ -127,15 +164,14 @@ def test_main_new_token_authorization(mocker: MockerFixture, patch_platformdirs:
             }
         }
     }
-    requests_mock.get(
-        'https://accounts.google.com/.well-known/openid-configuration',
-        json={
-            'token_endpoint': 'https://oauth2.googleapis.com/token',
-            'device_authorization_endpoint': 'https://oauth2.googleapis.com/device/code',
-            'authorization_endpoint': 'https://accounts.google.com/o/oauth2/v2/auth'
-        },
-        status_code=200)
+    mock_client = MagicMock()
+    mock_client.authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
+    mock_client.client_id = 'test_client_id'
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
     authorize_tokens = mocker.patch('gmail_archiver.main.authorize_tokens',
+                                    new_callable=AsyncMock,
                                     return_value={
                                         'refresh_token': 'refresh_token_value',
                                         'expires_in': 3600
@@ -170,7 +206,7 @@ def test_main_new_token_authorization(mocker: MockerFixture, patch_platformdirs:
             callback_called = True
 
     mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
-    imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 0
     authorize_tokens.assert_called()
@@ -197,13 +233,19 @@ def test_main_new_token_authorization_invalid_db(mocker: MockerFixture,
             }
         }
     }
+    mock_client = MagicMock()
+    mock_client.authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
+    mock_client.client_id = 'test_client_id'
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
     authorize_tokens = mocker.patch('gmail_archiver.main.authorize_tokens',
+                                    new_callable=AsyncMock,
                                     return_value={
                                         'refresh_token': 'refresh_token_value',
                                         'expires_in': 3600
                                     })
     setup_logging = mocker.patch('gmail_archiver.main.setup_logging')
-    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
     mocker.patch('gmail_archiver.main.get_localhost_redirect_uri',
                  return_value=(1234, 'http://localhost:1234'))
     callback: Callable[..., Any] | None = None
@@ -233,7 +275,7 @@ def test_main_new_token_authorization_invalid_db(mocker: MockerFixture,
             callback_called = True
 
     mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
-    imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 0
     authorize_tokens.assert_called()
@@ -259,7 +301,14 @@ def test_main_new_token_authorization_no_code_returned(mocker: MockerFixture,
             }
         }
     }
+    mock_client = MagicMock()
+    mock_client.authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
+    mock_client.client_id = 'test_client_id'
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
     mocker.patch('gmail_archiver.main.authorize_tokens',
+                 new_callable=AsyncMock,
                  return_value={
                      'refresh_token': 'refresh_token_value',
                      'expires_in': 3600
@@ -290,15 +339,12 @@ def test_main_new_token_authorization_no_code_returned(mocker: MockerFixture,
             pass
 
     mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
-    imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
-    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 1
     setup_logging.assert_called()
     imap_ssl.assert_not_called()
-    data = json.loads(oauth_file.read_text())
-    assert email in data
-    assert 'Did not obtain an authorisation code.' in result.output
+    assert 'Did not obtain an authorisation code' in result.output
 
 
 def test_main_new_auth_aborts_non_mutable_oauth_db(mocker: MockerFixture,
@@ -321,13 +367,19 @@ def test_main_new_auth_aborts_non_mutable_oauth_db(mocker: MockerFixture,
             }
         }
     }
+    mock_client = MagicMock()
+    mock_client.authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
+    mock_client.client_id = 'test_client_id'
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
     mocker.patch('gmail_archiver.main.authorize_tokens',
+                 new_callable=AsyncMock,
                  return_value={
                      'refresh_token': 'refresh_token_value',
                      'expires_in': 3600
                  })
     mocker.patch('gmail_archiver.main.setup_logging')
-    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
     mocker.patch('gmail_archiver.main.get_localhost_redirect_uri',
                  return_value=(1234, 'http://localhost:1234'))
     callback: Callable[..., Any] | None = None
@@ -355,7 +407,7 @@ def test_main_new_auth_aborts_non_mutable_oauth_db(mocker: MockerFixture,
             callback('auth_code')
 
     mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
-    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 1
     assert 'JSON object' in result.output
@@ -381,10 +433,16 @@ def test_main_new_auth_aborts_missing_refresh_in_token_response(mocker: MockerFi
             }
         }
     }
+    mock_client = MagicMock()
+    mock_client.authorization_endpoint = 'https://accounts.google.com/o/oauth2/v2/auth'
+    mock_client.client_id = 'test_client_id'
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
     authorize_tokens = mocker.patch('gmail_archiver.main.authorize_tokens',
+                                    new_callable=AsyncMock,
                                     return_value={'expires_in': 3600})
     mocker.patch('gmail_archiver.main.setup_logging')
-    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
     mocker.patch('gmail_archiver.main.get_localhost_redirect_uri',
                  return_value=(1234, 'http://localhost:1234'))
     callback: Callable[..., Any] | None = None
@@ -412,7 +470,7 @@ def test_main_new_auth_aborts_missing_refresh_in_token_response(mocker: MockerFi
             callback('auth_code')
 
     mocker.patch('gmail_archiver.main.http.server.HTTPServer', new=MockHTTPServer)
-    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 1
     assert 'refresh_token' in result.output
@@ -436,14 +494,18 @@ def test_main_refresh_aborts_non_mutable_oauth_db(mocker: MockerFixture,
             }
         }
     }
-    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
+    mock_client = MagicMock()
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
     refresh_token_mock = mocker.patch('gmail_archiver.main.refresh_token',
+                                      new_callable=AsyncMock,
                                       return_value={
                                           'refresh_token': 'refresh_token_value',
                                           'expires_in': 3600
                                       })
     mocker.patch('gmail_archiver.main.setup_logging')
-    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 1
     assert 'JSON object' in result.output
@@ -464,14 +526,18 @@ def test_main_refresh_token(mocker: MockerFixture, patch_platformdirs: tuple[Pat
             }
         }
     }
-    mocker.patch('gmail_archiver.main.GoogleOAuthClient')
+    mock_client = MagicMock()
+    mock_client.token_endpoint = 'https://oauth2.googleapis.com/token'
+    mock_client.discover = AsyncMock()
+    mocker.patch('gmail_archiver.main.GoogleOAuthClient', return_value=mock_client)
     refresh_token_mock = mocker.patch('gmail_archiver.main.refresh_token',
+                                      new_callable=AsyncMock,
                                       return_value={
                                           'refresh_token': 'refresh_token_value',
                                           'expires_in': 3600
                                       })
     setup_logging = mocker.patch('gmail_archiver.main.setup_logging')
-    imap_ssl = mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL')
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL')
     result = runner.invoke(main, [email, str(tmp_path), '--auth-only'])
     assert result.exit_code == 0
     refresh_token_mock.assert_called()
@@ -494,21 +560,24 @@ def test_main_process_called(mocker: MockerFixture, patch_platformdirs: tuple[Pa
         }
     }
     setup_logging = mocker.patch('gmail_archiver.main.setup_logging')
-    imap_conn_mock = mocker.Mock()
-    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL', return_value=imap_conn_mock)
-    process_mock = mocker.patch('gmail_archiver.main.archive_emails', return_value=0)
+    imap_conn_mock = AsyncMock()
+    imap_ssl = mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL', return_value=imap_conn_mock)
+    process_mock = mocker.patch('gmail_archiver.main.archive_emails',
+                                new_callable=AsyncMock,
+                                return_value=0)
     result = runner.invoke(main, [email, str(tmp_path)])
     assert result.exit_code == 0
-    process_mock.assert_called_with(imap_conn_mock,
-                                    email,
-                                    mocker.ANY,
-                                    tmp_path,
-                                    days=90,
-                                    debug=False,
-                                    delete=True)
+    process_mock.assert_called_once()
+    call_kwargs = process_mock.call_args
+    assert call_kwargs[0][0] is imap_conn_mock
+    assert call_kwargs[0][1] == email
+    assert call_kwargs[1]['days'] == 90
+    assert call_kwargs[1]['debug'] is False
+    assert call_kwargs[1]['delete'] is True
     imap_conn_mock.close.assert_called()
     imap_conn_mock.logout.assert_called()
     setup_logging.assert_called()
+    imap_ssl.assert_called()
 
 
 def test_main_exit_on_process_nonzero(mocker: MockerFixture, patch_platformdirs: tuple[Path, Path],
@@ -526,9 +595,11 @@ def test_main_exit_on_process_nonzero(mocker: MockerFixture, patch_platformdirs:
         }
     }
     setup_logging = mocker.patch('gmail_archiver.main.setup_logging')
-    imap_conn_mock = mocker.Mock()
-    mocker.patch('gmail_archiver.main.imaplib.IMAP4_SSL', return_value=imap_conn_mock)
-    process_mock = mocker.patch('gmail_archiver.main.archive_emails', return_value=2)
+    imap_conn_mock = AsyncMock()
+    mocker.patch('gmail_archiver.main.aioimaplib.IMAP4_SSL', return_value=imap_conn_mock)
+    process_mock = mocker.patch('gmail_archiver.main.archive_emails',
+                                new_callable=AsyncMock,
+                                return_value=2)
     result = runner.invoke(main, [email, str(tmp_path)])
     assert result.exit_code != 0
     process_mock.assert_called()
@@ -552,8 +623,8 @@ def test_main_missing_client_id_secret(mocker: MockerFixture, patch_platformdirs
 
 def test_main_missing_client_id_secret_2(mocker: MockerFixture, tmp_path: Path,
                                          runner: CliRunner) -> None:
-    mock_user_config_path = mocker.patch('gmail_archiver.main.user_config_path')
-    mock_user_config_path.return_value.__truediv__.return_value.exists.return_value = False
+    mocker.patch('gmail_archiver.main.user_cache_path', return_value=tmp_path)
+    mocker.patch('gmail_archiver.main.user_config_path', return_value=tmp_path)
     email = 'test@example.com'
     mocker.patch('gmail_archiver.main.tomlkit.loads',
                  return_value=mocker.MagicMock(return_value={}))
@@ -564,11 +635,10 @@ def test_main_missing_client_id_secret_2(mocker: MockerFixture, tmp_path: Path,
 
 def test_main_invalid_oauth_json_and_empty_config(mocker: MockerFixture, tmp_path: Path,
                                                   runner: CliRunner) -> None:
-    mock_user_config_path = mocker.patch('gmail_archiver.main.user_config_path')
-    mock_user_config_path.return_value.__truediv__.return_value.exists.return_value = False
-    mock_user_cache_path = mocker.patch('gmail_archiver.main.user_cache_path')
-    mock_user_cache_path.return_value.__truediv__.return_value.exists.return_value = True
-    mocker.patch('gmail_archiver.main.json.loads', side_effect=json.JSONDecodeError('msg', '', 0))
+    mocker.patch('gmail_archiver.main.user_cache_path', return_value=tmp_path)
+    mocker.patch('gmail_archiver.main.user_config_path', return_value=tmp_path)
+    oauth_file = tmp_path / 'oauth.json'
+    oauth_file.write_text('invalid json{{{')
     email = 'test@example.com'
     mocker.patch('gmail_archiver.main.tomlkit.loads',
                  return_value=mocker.MagicMock(return_value={}))

@@ -9,7 +9,6 @@ dev = [
   "mypy>=1.20.0",
   "ruff>=0.15.9",
   "ty>=0.0.29",
-  "types-requests>=2.33.0.20260402",
   "yapf>=0.43.0",
 ]
 docs = [
@@ -31,8 +30,8 @@ tests = [
   "mock>=5.2.0",
   "pytest-cov>=7.1.0",
   "pytest-mock>=3.15.1",
+  "pytest-asyncio>=1.0.0",
   "pytest>=9.0.2",
-  "requests-mock>=1.12.1",
 ]
 
 [project]
@@ -48,10 +47,12 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "aioimaplib>=2.0.0",
+  "anyio>=4.0.0",
   "bascom>=0.1.2",
   "click>=8.3.2",
+  "niquests>=3.18.0",
   "platformdirs>=4.9.4",
-  "requests>=2.33.1",
   "tomlkit>=0.14.0",
   "typing-extensions>=4.15.0",
 ]
@@ -154,6 +155,7 @@ venv = ".venv"
 venvPath = "."
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 mock_use_standalone_module = true
 norecursedirs = ["node_modules"]
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
@@ -199,7 +201,7 @@ max-complexity = 20
 extend-ignore-names = ["test_*"]
 
 [tool.ruff.lint.per-file-ignores]
-"gmail_archiver/main.py" = ["PLR0913"]
+"gmail_archiver/main.py" = ["PLR0913", "PLR0914"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
