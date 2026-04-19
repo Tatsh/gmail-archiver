@@ -30,6 +30,7 @@ doctrees
 dunder
 eeyore
 elif
+esac
 esbenp
 esbonio
 examplerefreshtoken
@@ -89,7 +90,9 @@ pypa
 pypi
 pyproject
 pytest
+pythonhosted
 regen
+ripgreprc
 rstcheck
 schemafile
 sdist
@@ -111,6 +114,7 @@ tomlkit
 tomllib
 tomlq
 tonumber
+tostring
 tryfirst
 ubyte
 udvare
