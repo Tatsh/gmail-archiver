@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 @asynccontextmanager
-async def _imap_debug_session(*, debug: bool) -> AsyncIterator[None]:  # noqa: RUF029
+async def _imap_debug_session(*, debug: bool) -> AsyncIterator[None]:
     aioimaplib_logger = logging.getLogger('aioimaplib.aioimaplib')
     if not debug:
         yield
@@ -144,7 +144,7 @@ async def refresh_token(url: str, client_id: str, client_secret: str,
                                           'client_id': client_id,
                                           'client_secret': client_secret,
                                           'grant_type': 'refresh_token',
-                                          'refresh_token': refresh_token,
+                                          'refresh_token': refresh_token
                                       },
                                       timeout=15)
     response.raise_for_status()

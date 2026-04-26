@@ -70,7 +70,6 @@ norecursedirs
 notarytool
 npmjs
 numpy
-numpydoc
 onefile
 oneline
 parsedate

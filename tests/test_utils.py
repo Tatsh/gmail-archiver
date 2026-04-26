@@ -397,7 +397,7 @@ async def test_google_oauth_client_initializes_endpoints(mocker: MockerFixture) 
     endpoints = {
         'authorization_endpoint': 'https://accounts.google.com/o/oauth2/v2/auth',
         'device_authorization_endpoint': 'https://oauth2.googleapis.com/device/code',
-        'token_endpoint': 'https://oauth2.googleapis.com/token',
+        'token_endpoint': 'https://oauth2.googleapis.com/token'
     }
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
