@@ -5,7 +5,7 @@ local utils = import 'utils.libjsonnet';
   description: 'Locally archive Gmail emails.',
   keywords: ['backup', 'email', 'google', 'gmail'],
   project_name: 'gmail-archiver',
-  version: '0.0.5',
+  version: '0.1.0',
   want_main: true,
   want_flatpak: true,
   publishing+: { flathub: 'sh.tat.gmail-archiver' },

@@ -9,6 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+## [0.1.0] - 2026-04-27
+
 ### Changed
 
 - Migrated from synchronous to asynchronous architecture. Public API functions
@@ -43,7 +45,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First version.
 
-[unreleased]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.5...HEAD
+[unreleased]: https://github.com/Tatsh/gmail-archiver/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.5...v0.1.0
 [0.0.5]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.3...v0.0.4
 [0.0.2]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.1...v0.0.2

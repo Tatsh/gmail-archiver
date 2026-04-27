@@ -30,5 +30,5 @@ platforms:
 source-code: 'https://github.com/Tatsh/gmail-archiver'
 summary: 'Locally archive Gmail emails.'
 title: 'gmail-archiver'
-version: '0.0.5'
+version: '0.1.0'
 website: 'https://tatsh.github.io/gmail-archiver/'

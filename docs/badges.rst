@@ -16,8 +16,8 @@
       :target: https://github.com/Tatsh/gmail-archiver/blob/master/LICENSE.txt
       :alt: License
 
-   .. image:: https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.0.5/master
-      :target: https://github.com/Tatsh/gmail-archiver/compare/v0.0.5...master
+   .. image:: https://img.shields.io/github/commits-since/Tatsh/gmail-archiver/v0.1.0/master
+      :target: https://github.com/Tatsh/gmail-archiver/compare/v0.1.0...master
       :alt: GitHub commits since latest release (by SemVer including pre-releases)
 
    .. image:: https://github.com/Tatsh/gmail-archiver/actions/workflows/codeql.yml/badge.svg
