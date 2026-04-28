@@ -19,7 +19,7 @@ from anyio import Path as AsyncPath
 import niquests
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncIterator, Callable, Mapping
 
     import aioimaplib  # type: ignore[import-untyped]
 
@@ -268,8 +268,15 @@ async def archive_emails(imap_conn: aioimaplib.IMAP4_SSL,
         return 0
 
 
-def log_oauth2_error(data: dict[str, Any]) -> None:
-    """Log OAuth2 error information."""
+def log_oauth2_error(data: Mapping[str, Any]) -> None:
+    """
+    Log OAuth2 error information.
+
+    Parameters
+    ----------
+    data : Mapping[str, Any]
+        Decoded OAuth2 error response. Read-only.
+    """
     if 'error' in data:
         log.error('Error type: %s', data['error'])
         if 'error_description' in data:
