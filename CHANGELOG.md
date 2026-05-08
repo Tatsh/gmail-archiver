@@ -9,6 +9,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+## [0.1.1] - 2026-05-08
+
+### Changed
+
+- `log_oauth2_error` accepts any mapping rather than only a `dict`.
+- Built distributions for Snap and Flatpak now build from the published git tag instead of the
+  working directory.
+- Documentation: added `anyio` to the intersphinx mapping and corrected the repository icon.
+- Updated production and development dependencies, including `ip-address` 10.1.0 to 10.1.1.
+- Refreshed the security policy's list of supported versions.
+
 ## [0.1.0] - 2026-04-27
 
 ### Changed
@@ -45,7 +56,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First version.
 
-[unreleased]: https://github.com/Tatsh/gmail-archiver/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/Tatsh/gmail-archiver/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Tatsh/gmail-archiver/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.5...v0.1.0
 [0.0.5]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/Tatsh/gmail-archiver/compare/v0.0.3...v0.0.4

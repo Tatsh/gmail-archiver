@@ -15,8 +15,9 @@ modules:
     buildsystem: 'simple'
     name: 'gmail-archiver'
     sources:
-      - path: '.'
-        type: 'dir'
+      - tag: 'v0.1.1'
+        type: 'git'
+        url: 'https://github.com/Tatsh/gmail-archiver'
 runtime: 'org.freedesktop.Platform'
 runtime-version: '24.08'
 sdk: 'org.freedesktop.Sdk'

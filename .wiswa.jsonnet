@@ -5,11 +5,29 @@ local utils = import 'utils.libjsonnet';
   description: 'Locally archive Gmail emails.',
   keywords: ['backup', 'email', 'google', 'gmail'],
   project_name: 'gmail-archiver',
-  version: '0.1.0',
+  version: '0.1.1',
   want_main: true,
   want_flatpak: true,
   publishing+: { flathub: 'sh.tat.gmail-archiver' },
   security_policy_supported_versions: { '0.1.x': ':white_check_mark:' },
+  snapcraft+: {
+    parts+: {
+      'gmail-archiver'+: {
+        source: 'https://github.com/Tatsh/gmail-archiver',
+        'source-tag': 'v0.1.1',
+        'source-type': 'git',
+      },
+    },
+  },
+  flatpak+: {
+    modules: [super.modules[0] + {
+      sources: [{
+        tag: 'v0.1.1',
+        type: 'git',
+        url: 'https://github.com/Tatsh/gmail-archiver',
+      }],
+    }],
+  },
   tests_pyproject+: {
     tool+: {
       ruff+: {

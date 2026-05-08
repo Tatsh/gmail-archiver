@@ -20,7 +20,9 @@ parts:
     plugin: 'python'
     python-packages:
       - '.'
-    source: '.'
+    source: 'https://github.com/Tatsh/gmail-archiver'
+    source-tag: 'v0.1.1'
+    source-type: 'git'
     stage-packages: []
 platforms:
   amd64:
@@ -30,5 +32,5 @@ platforms:
 source-code: 'https://github.com/Tatsh/gmail-archiver'
 summary: 'Locally archive Gmail emails.'
 title: 'gmail-archiver'
-version: '0.1.0'
+version: '0.1.1'
 website: 'https://tatsh.github.io/gmail-archiver/'
