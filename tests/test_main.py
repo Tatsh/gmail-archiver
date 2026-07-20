@@ -139,7 +139,7 @@ def test_main_auth_json_loads_return_invalid_type(mocker: MockerFixture,
         def __exit__(self, *args: object) -> None:
             pass
 
-        def handle_request(self) -> None:  # noqa: PLR6301
+        def handle_request(self) -> None:  # ruff:ignore[no-self-use]
             nonlocal callback
             assert callback is not None
             callback('auth_code')
@@ -199,7 +199,7 @@ def test_main_new_token_authorization(mocker: MockerFixture, patch_platformdirs:
         def __exit__(self, *args: object) -> None:
             pass
 
-        def handle_request(self) -> None:  # noqa: PLR6301
+        def handle_request(self) -> None:  # ruff:ignore[no-self-use]
             nonlocal callback, callback_called
             assert callback is not None
             callback('auth_code')
@@ -268,7 +268,7 @@ def test_main_new_token_authorization_invalid_db(mocker: MockerFixture,
         def __exit__(self, *args: object) -> None:
             pass
 
-        def handle_request(self) -> None:  # noqa: PLR6301
+        def handle_request(self) -> None:  # ruff:ignore[no-self-use]
             nonlocal callback, callback_called
             assert callback is not None
             callback('auth_code')
@@ -401,7 +401,7 @@ def test_main_new_auth_aborts_non_mutable_oauth_db(mocker: MockerFixture,
         def __exit__(self, *args: object) -> None:
             pass
 
-        def handle_request(self) -> None:  # noqa: PLR6301
+        def handle_request(self) -> None:  # ruff:ignore[no-self-use]
             nonlocal callback
             assert callback is not None
             callback('auth_code')
@@ -464,7 +464,7 @@ def test_main_new_auth_aborts_missing_refresh_in_token_response(mocker: MockerFi
         def __exit__(self, *args: object) -> None:
             pass
 
-        def handle_request(self) -> None:  # noqa: PLR6301
+        def handle_request(self) -> None:  # ruff:ignore[no-self-use]
             nonlocal callback
             assert callback is not None
             callback('auth_code')
