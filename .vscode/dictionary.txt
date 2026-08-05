@@ -42,6 +42,7 @@ functools
 genindex
 globaltoc
 googleusercontent
+handoff
 hoverxref
 htmlcov
 intersphinx
@@ -68,7 +69,6 @@ namedtuples
 niquests
 norecursedirs
 notarytool
-npmjs
 numpy
 onefile
 oneline
@@ -78,6 +78,7 @@ pavelzw
 pipx
 platformdirs
 plistlib
+preapproved
 prodvers
 pycache
 pydantic
@@ -103,9 +104,9 @@ smbexampletoken
 smbrefreshtoken
 snapcore
 snapcraft
-softprops
 soupsieve
 sphinxcontrib
+statusline
 syft
 tatsh
 testpaths
@@ -117,14 +118,19 @@ tostring
 tryfirst
 ubyte
 udvare
+undraft
+undrafted
 vendored
 venv
 vers
 virtualenv
+winget
 wiswa
 wiswa's
+worktree
 xcrun
 xoauth
 yapf
 yapfignore
 yarnrc
+zizmor
