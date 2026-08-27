@@ -15,7 +15,6 @@ codesign
 colorlog
 commitizen
 conftest
-cooldown
 coveragerc
 coverallsapp
 ctypes
@@ -30,6 +29,7 @@ doctrees
 dunder
 eeyore
 elif
+endswith
 esac
 esbenp
 esbonio
@@ -67,8 +67,10 @@ myproject
 mypy
 namedtuples
 niquests
+noqa
 norecursedirs
 notarytool
+nullglob
 numpy
 onefile
 oneline
@@ -94,11 +96,13 @@ pythonhosted
 regen
 ripgreprc
 rstcheck
+sbclaude
 schemafile
 sdist
 setattr
 shellcheck
 shellformat
+shopt
 signtool
 smbexampletoken
 smbrefreshtoken

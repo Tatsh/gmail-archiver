@@ -5,6 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 from aioimaplib import Response  # type: ignore[import-untyped]
 from anyio import Path as AsyncPath
+from niquests import HTTPError
+import pytest
+
 from gmail_archiver.utils import (
     GoogleOAuthClient,
     archive_emails,
@@ -16,8 +19,6 @@ from gmail_archiver.utils import (
     log_oauth2_error,
     refresh_token,
 )
-from niquests import HTTPError
-import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path

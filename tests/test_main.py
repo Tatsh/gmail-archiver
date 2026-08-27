@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 import json
 
-from gmail_archiver.main import main
 from typing_extensions import Self
 import pytest
+
+from gmail_archiver.main import main
 
 if TYPE_CHECKING:
     from collections.abc import Callable
