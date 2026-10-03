@@ -4,12 +4,12 @@ requires = ["hatchling"]
 
 [dependency-groups]
 dev = [
-  "commitizen>=4.18.0",
+  "commitizen>=4.19.0",
   "cz-path>=0.0.7",
   "mypy>=2.3.1",
-  "ruff==0.16.8",
-  "ty>=0.0.73",
-  "yapf>=0.43.0",
+  "ruff==0.16.9",
+  "ty>=0.0.84",
+  "yapf>=0.43.0"
 ]
 docs = [
   "autodoc-pydantic>=2.2.0",
@@ -20,7 +20,7 @@ docs = [
   "sphinx-click>=6.2.0",
   "sphinx-datatables>=1.0.0",
   "sphinx-immaterial>=0.13.9",
-  "sphinx>=9.1.0; python_version >= \"3.13\"",
+  "sphinx>=9.1.0; python_version >= \"3.13\""
 ]
 tests = [
   "coveralls>=4.1.0",
@@ -28,7 +28,7 @@ tests = [
   "pytest-asyncio>=1.4.0",
   "pytest-cov>=7.1.0",
   "pytest-mock>=3.15.1",
-  "pytest>=9.1.1",
+  "pytest>=9.1.1"
 ]
 
 [project]
@@ -41,17 +41,17 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
-  "Typing :: Typed",
+  "Typing :: Typed"
 ]
 dependencies = [
   "aioimaplib>=2.0.1",
-  "anyio>=4.14.2",
+  "anyio>=4.15.1",
   "bascom>=0.2.0",
-  "click>=8.4.2",
-  "niquests>=3.21.0",
-  "platformdirs>=4.11.3",
+  "click>=8.5.0",
+  "niquests>=3.21.2",
+  "platformdirs>=4.11.14",
   "tomlkit>=0.15.1",
-  "typing-extensions>=4.16.0",
+  "typing-extensions>=4.16.0"
 ]
 description = "Locally archive Gmail emails."
 keywords = ["backup", "email", "google", "gmail"]
@@ -88,7 +88,7 @@ version_files = [
   "man/gmail-archiver.1",
   "package.json",
   "sh.tat.gmail-archiver.yml",
-  "snapcraft.yaml",
+  "snapcraft.yaml"
 ]
 version_provider = "pep621"
 
@@ -100,7 +100,7 @@ omit = [
   "tests.py",
   "tests/*/test_*.py",
   "tests/test_*.py",
-  "typing.py",
+  "typing.py"
 ]
 show_missing = true
 
@@ -112,7 +112,7 @@ omit = [
   "tests.py",
   "tests/*/test_*.py",
   "tests/test_*.py",
-  "typing.py",
+  "typing.py"
 ]
 
 [tool.doc8]
@@ -163,7 +163,6 @@ cache-dir = "~/.cache/ruff"
 force-exclude = true
 line-length = 100
 namespace-packages = ["docs", "tests"]
-output-prefer-rule-codes = true
 target-version = "py310"
 unsafe-fixes = true
 
@@ -176,19 +175,16 @@ quote-style = "single"
 [tool.ruff.lint]
 extend-select = ["ALL"]
 ignore = [
-  "ANN401",
-  "COM812",
-  "CPY001",
-  "D203",
-  "D204",
-  "D212",
-  "N818",
-  "RUF105",
-  "RUF106",
-  "RUF201",
-  "S404",
-  "S603",
-  "TD002",
+  "any-type",
+  "error-suffix-on-exception-name",
+  "incorrect-blank-line-after-class",
+  "incorrect-blank-line-before-class",
+  "missing-copyright-notice",
+  "missing-todo-author",
+  "missing-trailing-comma",
+  "multi-line-summary-first-line",
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import"
 ]
 preview = true
 
@@ -214,7 +210,7 @@ max-complexity = 20
 extend-ignore-names = ["test_*"]
 
 [tool.ruff.lint.per-file-ignores]
-"gmail_archiver/main.py" = ["PLR0913", "PLR0914"]
+"gmail_archiver/main.py" = ["too-many-arguments", "too-many-locals"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

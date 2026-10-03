@@ -1,26 +1,31 @@
 # Python guidelines
 
 - Follow all rules given by Ruff, with the following exceptions:
-  - `ANN401`: Allow use of the `typing.Any` type.
-  - `ARG001`, `ARG002`, and `ARG004`: Allow unused arguments in functions and methods, primarily in
-    cases where a method is overridden or a function must be compatible with an interface.
-  - `COM812`: Disabled because it may conflict with a formatter. By default, do not add trailing
-    commas.
-  - `CPY001`: Never add copyright notices in files.
-  - `D107`: Docstrings in `__init__` methods are not required.
-  - `D203`: A blank line is not required after the class declaration.
-  - `D212`: Summary lines are not required to be positioned on the first physical line of the
-    docstring directly after the `"""`.
-  - `N818`: Exception names may exist without the `Error` suffix.
-  - `S101`: `assert` statements are allowed in tests and for type narrowing.
-  - `S404`: Importing `subprocess` is allowed.
-  - `S603`: This rule is disabled because it conflicts with `S602`, which is enabled.
-  - `TD002`: Do not add an author in `TODO` comments.
-  - `TD003`: Do not add a link in `TODO` comments.
-  - `TD004`: Do not add a colon in `TODO` comments.
-- Never put a rationale after a suppression comment. `# noqa`, `# ruff: ignore[...]`,
-  `# type: ignore[...]`, `# ty: ignore[...]`, and `# pyright: ignore[...]` end with their codes and
-  nothing else.
+  - `any-type`: Allow use of the `typing.Any` type.
+  - `assert`: `assert` statements are allowed in test code only.
+  - `error-suffix-on-exception-name`: Exception names may exist without the `Error` suffix.
+  - `incorrect-blank-line-before-class`: A blank line is not required after the class declaration.
+  - `missing-copyright-notice`: Never add copyright notices in files.
+  - `missing-todo-author`: Do not add an author in `TODO` comments.
+  - `missing-todo-colon`: Do not add a colon in `TODO` comments.
+  - `missing-todo-link`: Do not add a link in `TODO` comments.
+  - `missing-trailing-comma`: Disabled because it may conflict with a formatter. By default, do not
+    add trailing commas.
+  - `multi-line-summary-first-line`: Summary lines are not required to be positioned on the first
+    physical line of the docstring directly after the `"""`.
+  - `subprocess-without-shell-equals-true`: This rule is disabled because it conflicts with
+    `subprocess-popen-with-shell-equals-true`, which is enabled.
+  - `suspicious-subprocess-import`: Importing `subprocess` is allowed.
+  - `undocumented-public-init`: Docstrings in `__init__` methods are not required.
+  - `unused-function-argument`, `unused-method-argument`, and `unused-static-method-argument`:
+    Allow unused arguments in functions and methods, primarily in cases where a method is
+    overridden or a function must be compatible with an interface.
+- Suppress a Ruff diagnostic with `# ruff: ignore[rule-name]`, never `# noqa`. Ruff flags the
+  `# noqa` form, and `# noqa` cannot identify a rule that does not have a code, such as
+  `pytest-fixture-autouse`.
+- Never put a rationale after a suppression comment. `# ruff: ignore[...]`, `# type: ignore[...]`,
+  `# ty: ignore[...]`, and `# pyright: ignore[...]` end with their rule names or codes and nothing
+  else.
 - When a function or method signature fits on one line within 100 characters, write its parameters
   horizontally. Example:
 
@@ -198,7 +203,7 @@
   name unless it would affect clarity.
 - Class body ordering: attributes first (sorted alphabetically: dunder, public, private), then
   methods (sorted alphabetically: dunder, public, private). Exception: in Django models, follow
-  Ruff rule DJ012 (Django Style Guide ordering) instead.
+  Ruff rule `django-unordered-body-content-in-model` (Django Style Guide ordering) instead.
 - By default, sort collections alphabetically.
 - If a function accepts a collection of items and returns it, prefer to return a modified copy of
   the collection instead of modifying it in place.
@@ -265,6 +270,11 @@
 - Prefer `@functools.cache` over `@functools.lru_cache` for unbounded caches.
 - Prefer to use `indent=2, sort_keys=True` when dumping JSON for human-readable output.
 - Chain exceptions with `raise ... from e` to preserve context.
+- Never raise `AssertionError`. Raise an exception named for what actually went wrong, defining a
+  new one when none fits. Exception names need not end in `Error`.
+- Never use `assert` outside test code, including for type narrowing. Enforce an invariant with
+  `if not ...:` and a raise, which narrows types just as well, survives `python -O`, and reports
+  something useful when it fires.
 
 ## Typing
 
