@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email import message_from_bytes
 from email.utils import parsedate_tz
 from functools import cache
@@ -206,8 +206,7 @@ async def archive_emails(imap_conn: aioimaplib.IMAP4_SSL,
         log.info('Deleting emails: %s', delete)
         await imap_conn.xoauth2(email, access_token.encode())
         await imap_conn.select(dq('[Gmail]/All Mail'))
-        before_date = (datetime.now(tz=timezone.utc).date() -
-                       timedelta(days=days)).strftime('%d-%b-%Y')
+        before_date = (datetime.now(tz=UTC).date() - timedelta(days=days)).strftime('%d-%b-%Y')
         log.debug('Searching for emails before %s.', before_date)
         response = await imap_conn.search(f'BEFORE {dq(before_date)}')
         match response.result:
@@ -238,7 +237,7 @@ async def archive_emails(imap_conn: aioimaplib.IMAP4_SSL,
                 log.error('Error converting date: %s', msg['Date'])
                 return 1
             the_date = datetime(*cast('tuple[int, int, int, int, int, int]', date_tuple[0:7]),
-                                tzinfo=timezone.utc)
+                                tzinfo=UTC)
             month = the_date.strftime('%m-%b')
             day = the_date.strftime('%d-%a')
             path = resolved / email / str(date_tuple[0]) / month / day

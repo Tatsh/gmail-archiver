@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 from unittest.mock import AsyncMock, MagicMock
 import json
 
-from typing_extensions import Self
 import pytest
 
 from gmail_archiver.main import main
@@ -42,8 +41,7 @@ def patch_platformdirs(mocker: MockerFixture, tmp_path: Path, oauth_file: Path,
 
 
 def make_auth_data(*, expired: bool = False) -> dict[str, Any]:
-    expiration_time = (datetime.now(timezone.utc) -
-                       timedelta(seconds=10) if expired else datetime.now(timezone.utc) +
+    expiration_time = (datetime.now(UTC) - timedelta(seconds=10) if expired else datetime.now(UTC) +
                        timedelta(hours=1))
     return {
         'access_token': 'access_token_value',
@@ -356,7 +354,7 @@ def test_main_new_auth_aborts_non_mutable_oauth_db(mocker: MockerFixture,
     oauth_file.write_text('{}')
     inner = {
         'access_token': 'a',
-        'expiration_time': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        'expiration_time': (datetime.now(UTC) + timedelta(hours=1)).isoformat()
     }
     frozen_db = MappingProxyType({email: inner})
     mocker.patch('gmail_archiver.main.json.loads', return_value=frozen_db)
@@ -423,7 +421,7 @@ def test_main_new_auth_aborts_missing_refresh_in_token_response(mocker: MockerFi
     email = 'norefreshtoken@example.com'
     auth_db = {
         'access_token': 'a',
-        'expiration_time': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        'expiration_time': (datetime.now(UTC) + timedelta(hours=1)).isoformat()
     }
     oauth_file.write_text(json.dumps({email: auth_db}))
     mocker.patch('gmail_archiver.main.tomlkit.loads').return_value.unwrap.return_value = {

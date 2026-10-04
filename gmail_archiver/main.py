@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from base64 import urlsafe_b64encode
 from collections.abc import Mapping, MutableMapping
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
@@ -118,7 +118,7 @@ async def _async_main(email: str,
                                            config['client_secret'], auth_code, verifier,
                                            redirect_uri)
         expires_in = auth_data['expires_in']
-        auth_data['expiration_time'] = (datetime.now(tz=timezone.utc) +
+        auth_data['expiration_time'] = (datetime.now(tz=UTC) +
                                         timedelta(seconds=expires_in)).isoformat()
         log.debug('New auth data for %s: %s', email, auth_data)
         if not isinstance(auth_data_db, MutableMapping):
@@ -130,8 +130,7 @@ async def _async_main(email: str,
             raise click.Abort
         await oauth_file.write_text(
             json.dumps(auth_data_db, allow_nan=False, sort_keys=True, indent=2))
-    elif ((expiration_time and
-           (datetime.fromisoformat(expiration_time) <= datetime.now(timezone.utc)))
+    elif ((expiration_time and (datetime.fromisoformat(expiration_time) <= datetime.now(UTC)))
           or force_refresh):
         log.debug('Refreshing token.')
         ref_token = auth_data_db[email]['refresh_token']
@@ -140,7 +139,7 @@ async def _async_main(email: str,
         auth_data = await refresh_token(client.token_endpoint, config['client_id'],
                                         config['client_secret'], ref_token)
         expires_in = auth_data['expires_in']
-        auth_data['expiration_time'] = (datetime.now(timezone.utc) +
+        auth_data['expiration_time'] = (datetime.now(UTC) +
                                         timedelta(seconds=expires_in)).isoformat()
         if not isinstance(auth_data_db, MutableMapping):
             click.echo('Authorisation database must be a JSON object.', err=True)
