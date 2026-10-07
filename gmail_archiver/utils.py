@@ -19,7 +19,7 @@ from anyio import Path as AsyncPath
 import niquests
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, Mapping
+    from collections.abc import AsyncGenerator, Callable, Mapping
 
     import aioimaplib  # type: ignore[import-untyped]
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 @asynccontextmanager
-async def _imap_debug_session(*, debug: bool) -> AsyncIterator[None]:
+async def _imap_debug_session(*, debug: bool) -> AsyncGenerator[None, None]:
     aioimaplib_logger = logging.getLogger('aioimaplib.aioimaplib')
     if not debug:
         yield
