@@ -456,8 +456,8 @@ def test_get_auth_http_handler_calls_callback_with_code(mocker: MockerFixture) -
     handler_cls = get_auth_http_handler(callback)
     mocker.MagicMock()
     handler = handler_cls()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
-    handler.do_GET()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-    handler.send_response.assert_called_once_with(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    handler.do_GET()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+    handler.send_response.assert_called_once_with(  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         200)
-    handler.send_header.assert_called_once_with(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    handler.send_header.assert_called_once_with(  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         'Content-type', 'text/html')
